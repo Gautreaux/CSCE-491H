@@ -1,0 +1,9 @@
+gcodeFullSet/*
+gcodeSampleSet/*
+*/.vs/*
+*/.vscode/*
+*/__pycache__/
+
+.vs/*
+.vscode/*
+__pycache__/*
