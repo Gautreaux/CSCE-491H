@@ -157,6 +157,9 @@ class InwardODonnell(GenericODonnell):
         #   pos=(x,y)
         #   parent=(a,b)
         #   dist=d
+        # TODO - this should be externally declared
+        #       off of some A* ADT
+        # TODO - are the heruistics in here admissable and consistent
         @total_ordering
         class SearchState(object):
             MAX_LEN = float('inf')
@@ -264,7 +267,7 @@ class InwardODonnell(GenericODonnell):
 
         return finalState.length
 
-class InwardOdonnellSplit(InwardODonnell):
+class InwardODonnellSplit(InwardODonnell):
 
     def __str__(self):
         return "Inward Split Odonnell"

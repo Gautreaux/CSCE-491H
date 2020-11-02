@@ -5,11 +5,13 @@ from recomputeFramework import BatchRecompute
 
 # from recomputeTrivial import TrivialRecompute, InvalidRecompute
 from recomputeFundamentals import PrintTimeRecompute, PrintTravelTimeRecompute
-from recomputeODonnell import InwardODonnell, InwardOdonnellSplit
+from recomputeODonnell import InwardODonnell, InwardODonnellSplit
+from recomputeGraph import GraphRecompute
 
 SAMPLE_DIR = "gcodeSampleSet"
 FILE_TYPE = "gcode"
 
+#TODO - make this programatiaclly built
 HEADER_STR = "Header:[printDist,NormalDist,Odonnel,SplitOdonnel]"
 
 if __name__ == "__main__":
@@ -17,10 +19,11 @@ if __name__ == "__main__":
 
     parser = gcodePathParser()
     worker = BatchRecompute()
-    worker.addRecomputeModel(PrintTimeRecompute)
-    worker.addRecomputeModel(PrintTravelTimeRecompute)
-    worker.addRecomputeModel(InwardODonnell)
-    worker.addRecomputeModel(InwardOdonnellSplit)
+    # worker.addRecomputeModel(PrintTimeRecompute)
+    # worker.addRecomputeModel(PrintTravelTimeRecompute)
+    # worker.addRecomputeModel(InwardODonnell)
+    # worker.addRecomputeModel(InwardODonnellSplit)
+    worker.addRecomputeModel(GraphRecompute)
 
     parseValid = {}
     recomputeResults = {}
@@ -40,13 +43,18 @@ if __name__ == "__main__":
         parseValid[fileID] = False
         recomputeResults[fileID] = None
 
+        # TODO - this function needs a rework
         def printRes(header=None):
             if header != None:
                 print(header)
 
             for key in parseValid:
                 print(f"{key}:[", end="")
-                baseTime = recomputeResults[key][1]
+                try:
+                    baseTime = recomputeResults[key][1]
+                except Exception:
+                    baseTime = 1
+
                 if parseValid[key] is False:
                     print("parse failure")
                 else:   

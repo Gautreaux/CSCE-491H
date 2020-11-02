@@ -39,4 +39,4 @@ def aStar(stateGenerator, isGoalState, isVisited):
 class NoValidPath(Exception):
     pass
 
-# TODO - define a state ADT
+# TODO - define a state ADT and integrate more better

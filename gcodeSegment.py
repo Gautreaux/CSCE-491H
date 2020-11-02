@@ -2,7 +2,7 @@
 
 from lineSegmentLib import LineSegment
 
-
+#TODO - should become GCodeSegment
 class gcodeSegment(LineSegment):
     def __init__(self, start, end, printAmt = None):
         #self.startPos = self.point
