@@ -5,7 +5,7 @@ import os
 # get all files of the type fileType in the searchDir
 def allFilesInDirByType(searchDir, fileType) -> list:
     if(fileType[0] == '.'):
-        fileType = fileType[1]
+        fileType = fileType[1:]
 
     if(len(fileType) <= 0):
         #actually, it could be: lets see if this is a long term problem
