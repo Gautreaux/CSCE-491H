@@ -3,11 +3,13 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
 import itertools
+from os import stat
 
 from typing import Dict, List, Optional, Set, Tuple
 
 from bitmapLib import BitMap
 from gcodeSegment import gcodeSegment
+from priorityQueueLib import PriorityQueue
 from vectorLib import pointDistance
 
 
@@ -62,13 +64,21 @@ def getInicidentSegmentIndiciesFromPositionIndex(posIndex : int) -> List[int]:
 
 
 class SearchState():
-    def __init__(self, a1Index : int, a2Index : int, bitmap : BitMap) -> None:
+    def __init__(self, a1Index : int, a2Index : int, bitmap : BitMap, depth) -> None:
         self.a1Index = a1Index
         self.a2Index = a2Index
         self.bitmap = bitmap
+        self.depth = depth
 
     def priority(self) -> int:
-        return 2*self.bitmap.getCount()
+        # DFS search
+        # return len(LAYER_POS_LIST) - self.bitmap.getCount()
+
+        # BFS?
+        # return 2*self.bitmap.getCount()
+
+        # A*
+        return self.depth + 2*self.bitmap.getCount()
 
     def isValid(self) -> bool:
         global LAYER_POS_LIST
@@ -78,7 +88,13 @@ class SearchState():
     def __str__(self) -> str:
         global LAYER_POS_LIST
         return (f"state: {LAYER_POS_LIST[self.a1Index]} {LAYER_POS_LIST[self.a2Index]}"
-                f" {self.bitmap.getCount()}/{len(LAYER_POS_LIST)}")
+                f" {self.bitmap.getCount()}/{len(LAYER_POS_LIST)} {self.depth}")
+
+    def __hash__(self) -> int:
+        return hash(self.bitmap)
+
+    def get_pos_tuples(self) -> Tuple[int, int]:
+        return (self.a1Index, self.a2Index)
 
 class OrderedGenerator(ABC):
 
@@ -98,6 +114,11 @@ class OrderedGenerator(ABC):
     def next(self) -> SearchState:
         raise NotImplementedError()
 
+    
+    def __lt__(self, o: object) -> bool:
+        return self.order() < o.order()
+
+
 # generate and return all the start states
 class StartStateOrderedGenerator(OrderedGenerator):
     '''State Generator that generates all start states'''
@@ -112,7 +133,7 @@ class StartStateOrderedGenerator(OrderedGenerator):
         self.i = -1
         self.j = len(LAYER_SEGMENTS_LIST)
 
-        self.allPriority = self.peek().priority
+        self.allPriority = self.peek().priority()
 
     def order(self) -> int:
         return self.allPriority
@@ -131,7 +152,7 @@ class StartStateOrderedGenerator(OrderedGenerator):
     def _next(self) -> SearchState:
         """Return the next state without checking its validity"""
         self.i, self.j = self._getNextIJ(self.i, self.j)
-        return SearchState(self.i, self.j, self.bitmap)
+        return SearchState(self.i, self.j, self.bitmap, 0)
 
     def next(self) -> SearchState:
         """Return the next valid state"""
@@ -146,7 +167,7 @@ class StartStateOrderedGenerator(OrderedGenerator):
         j = self.j
         while True:
             i,j = self._getNextIJ(i, j)
-            s = SearchState(i, j, self.bitmap)
+            s = SearchState(i, j, self.bitmap, 0)
             if s.isValid():
                 return s
             # since we know that i,j is not valid, we can save some time on the next next() by
@@ -163,7 +184,7 @@ class SuccessorStateOrderedGenerator(OrderedGenerator):
 
 
     def _getNext1(self) -> Tuple[int, int]:
-        """return segment indexes of the next type 1 successors"""
+        """return segment indexes of the successor indexes to print"""
         if self.i is None:
             a1Incident = getInicidentSegmentIndiciesFromPositionIndex(self.parentState.a1Index)
             a2Incident = getInicidentSegmentIndiciesFromPositionIndex(self.parentState.a2Index)
@@ -171,91 +192,288 @@ class SuccessorStateOrderedGenerator(OrderedGenerator):
         return next(self.i)
 
     def _getNext2(self) -> Tuple[Optional[int], Optional[int]]:
-        global LAYER_SEGMENTS_LIST
+        """return a pair None and Int where
+            None is a NOP
+            int is the segment index to print"""
         if self.i is None:
             a1Incident = getInicidentSegmentIndiciesFromPositionIndex(self.parentState.a1Index)
             a2Incident = getInicidentSegmentIndiciesFromPositionIndex(self.parentState.a2Index)
             i1 = itertools.product(a1Incident, [None])
             i2 = itertools.product([None], a2Incident)
-            i3 = itertools.product(a1Incident, range(len(LAYER_SEGMENTS_LIST)))
-            i4 = itertools.product(range(len(LAYER_SEGMENTS_LIST)), a2Incident)
-            self.i = itertools.chain(i1,i2, i3, i4)
+            self.i = itertools.chain(i1, i2)
         return next(self.i)
+
+    def _getNext3(self) -> Tuple[int, int]:
+        """returns a pair of positive and negative int where
+            positive int is the segment index to print
+            negative int is the position index to move to"""
+        global LAYER_POS_LIST
+        if self.i is None:
+            a1Incident = getInicidentSegmentIndiciesFromPositionIndex(self.parentState.a1Index)
+            a2Incident = getInicidentSegmentIndiciesFromPositionIndex(self.parentState.a2Index)
+            l = len(LAYER_POS_LIST)
+            # TODO - this can return a negative 0 and then what?
+            i1 = itertools.product(a1Incident, range(0, -l, -1))
+            i2 = itertools.product(range(0, -l, -1), a2Incident)
+            self.i = itertools.chain(i1, i2)
+        return next(self.i)
+
+    def _getNext4(self) -> Tuple[Optional[int], Optional[int]]:
+        """returns a pair int and None where
+            None is a NOP
+            int is the position index to move to"""
+        global LAYER_POS_LIST
+        if self.i is None:
+            i1 = itertools.product(range(len(LAYER_POS_LIST)), [None])
+            i2 = itertools.product([None], range(len(LAYER_POS_LIST)))
+            self.i = itertools.chain(i1, i2)
+        return next(self.i)
+
+    def _getNext5(self) -> Tuple[int, int]:
+        """returns a pair of int where each int is the position index to move to"""
+        global LAYER_POS_LIST
+        if self.i is None:
+            self.i = itertools.product(range(len(LAYER_POS_LIST)), range((len(LAYER_POS_LIST))))
+        return next(self.i)
+
+    def _doMode1Check(self) -> Optional[SearchState]:
+        """Do the checking for mode 1 and return the state,
+            returning None if invalid state"""
+        segA1Index, segA2Index = self._getNext1()
+
+        # check if the state was already printed
+        if self.parentState.bitmap[segA1Index] == 1:
+            # it was already printed, so this transition is not valid
+            return None
+        if self.parentState.bitmap[segA2Index] == 1:
+            return None
+
+        # get the segment objects
+        segA1 = LAYER_SEGMENTS_LIST[segA1Index]
+        segA2 = LAYER_SEGMENTS_LIST[segA2Index]
+
+        # check if the segments are separated by the proper amount
+        if segA1.minSeperation(segA2) < MIN_SEPERATION_MM:
+            # there is not enough seperation
+            return None
+
+        # segment are separated by enough
+        #   which implies the endpoints are separated by enough
+        # so lets create a new state
+        newBitmap = deepcopy(self.parentState.bitmap)
+        newBitmap[segA1Index] = 1
+        newBitmap[segA2Index] = 1
+
+        oldA1Pos = LAYER_POS_LIST[self.parentState.a1Index]
+        oldA2Pos = LAYER_POS_LIST[self.parentState.a2Index]
+
+        # get the point opposite where we start
+        newA1Pos = (segA1.point if segA1.pointTwo == oldA1Pos else segA1.pointTwo)
+        newA2Pos = (segA2.point if segA2.pointTwo == oldA2Pos else segA2.pointTwo)
+
+        #TODO - this should be pre-computed 
+        newA1Index = LAYER_POS_LIST.index(newA1Pos)
+        newA2Index = LAYER_POS_LIST.index(newA2Pos)
+
+        return SearchState(newA1Index, newA2Index, newBitmap, self.parentState.depth + 1)
+
+    def _doMode2Check(self) -> Optional[SearchState]:
+        """Do the checking for mode 2 and return the state,
+            returning None if invalid state"""
+        global LAYER_SEGMENTS_LIST
+        global LAYER_POS_LIST
+
+        segA1Index, segA2Index = self._getNext2()
+
+        pointACommIndex = (self.parentState.a1Index if segA1Index is None else self.parentState.a2Index)
+        oldPosIndex = (self.parentState.a1Index if segA2Index is None else self.parentState.a2Index)
+        segACommIndex = (segA1Index if segA1Index is not None else segA2Index)
+        if self.parentState.bitmap[segACommIndex] == 1:
+            return None
+
+        segAComm = LAYER_SEGMENTS_LIST[segACommIndex]
+        pointAComm = LAYER_POS_LIST[pointACommIndex]
+
+        if segAComm.minSeperationPoint(pointAComm) < MIN_SEPERATION_MM:
+            return None
+
+        oldPosComm = LAYER_POS_LIST[oldPosIndex]
+
+        newBitmap = deepcopy(self.parentState.bitmap)
+        newBitmap[segACommIndex] = 1
+
+        newPos = (segAComm.point if segAComm.pointTwo == oldPosComm else segAComm.pointTwo)
+
+        # TODO - this should be precomputed
+        newIndex = LAYER_POS_LIST.index(newPos)
+
+        if segA1Index is None:
+            newA1Index = pointACommIndex
+            newA2Index = newIndex
+        else:
+            newA2Index = pointACommIndex
+            newA1Index = newIndex
+
+        return SearchState(newA1Index, newA2Index, newBitmap, self.parentState.depth + 1)
+
+        raise NotImplementedError()
+
+    def _doMode3Check(self) -> Optional[SearchState]:
+        """Do the checking for mode 3 and return the state,
+            returning None if invalid state"""
+        segA1Index, segA2Index = self._getNext1()
+
+        printSegIndex = segA1Index if segA1Index >= 0 else segA2Index
+        positionEndIndex = -segA1Index if segA1Index < 0 else -segA2Index
+        postionStartIndex = self.parentState.a1Index if segA1Index < 0 else self.parentState.a2Index
+
+        if postionStartIndex == positionEndIndex:
+            return None
+
+        if self.parentState.bitmap[printSegIndex] == 1:
+            return None
+
+        printSeg = LAYER_SEGMENTS_LIST[printSegIndex]
+    
+        # construct the sudo segment for the movement
+        posStart = LAYER_POS_LIST[postionStartIndex]
+        posEnd = LAYER_POS_LIST[positionEndIndex]
+        posSeg = gcodeSegment(posStart, posEnd)
+
+        if printSeg.minSeperation(posSeg) < MIN_SEPERATION_MM:
+            return None
+
+        #create new state
+        newBitmap = deepcopy(self.parentState.bitmap)
+        newBitmap[printSegIndex] = 1
+
+        oldPosIndex = self.parentState.a1Index if segA1Index >= 0 else self.parentState.a2Index
+        oldPos = LAYER_POS_LIST[oldPosIndex]
+        newPos = printSeg.point if oldPos == printSeg.pointTwo else printSeg.pointTwo
+
+        newIndex = LAYER_POS_LIST.index(newPos)
+
+        if segA1Index >= 0:
+            newA1Index = newIndex
+            newA2Index = positionEndIndex
+        else:
+            newA1Index = positionEndIndex
+            newA2Index = newIndex
+
+        return SearchState(newA1Index, newA2Index, newBitmap, self.parentState.depth + 1)
+
+    def _doMode4Check(self) -> Optional[SearchState]:
+        """Do the checking for mode 4 and return the state,
+            returning None if invalid state"""
+        
+        segA1Index, segA2Index = self._getNext4()
+
+        nopPosIndex = self.parentState.a1Index if segA1Index is None else self.parentState.a2Index
+        movePosTargetIndex = segA1Index if segA1Index is not None else segA2Index
+        movePosStartIndex = self.parentState.a1Index if segA1Index is not None else self.parentState.a2Index
+
+        if movePosStartIndex == movePosTargetIndex:
+            return None
+
+        movePosTarget = LAYER_POS_LIST[movePosTargetIndex]
+        movePosStart = LAYER_POS_LIST[movePosStartIndex]
+        nopPos = LAYER_POS_LIST[nopPosIndex]
+
+        dummySeg = gcodeSegment(movePosStart, movePosTarget)
+
+        if dummySeg.minSeperationPoint(nopPos) < MIN_SEPERATION_MM:
+            return None
+
+        if segA1Index is None:
+            newA1Index = nopPosIndex
+            newA2Index = movePosTargetIndex
+        else:
+            newA1Index = movePosTargetIndex
+            newA2Index = nopPosIndex
+        
+        return SearchState(newA1Index, newA2Index, self.parentState.bitmap, self.parentState.depth + 1)
+
+    def _doMode5Check(self) -> Optional[SearchState]:
+        """Do the checking for mode 5 and return the state,
+            returning None if invalid state"""
+
+        posA1TargetIndex, posA2TargetIndex = self._getNext5()
+
+        posA1StartIndex = self.parentState.a1Index
+        posA2StartIndex = self.parentState.a2Index
+
+        if posA1TargetIndex == posA1StartIndex:
+            return None
+        if posA2TargetIndex == posA2StartIndex:
+            return None
+
+        posA1TargetPos = LAYER_POS_LIST[posA1TargetIndex]
+        posA1StartPos = LAYER_POS_LIST[posA1StartIndex]
+        posA2TargetPos = LAYER_POS_LIST[posA2TargetIndex]
+        posA2StartPos = LAYER_POS_LIST[posA2StartIndex]
+
+        dummmySegA1 = gcodeSegment(posA1StartPos, posA1TargetPos)
+        dummmySegA2 = gcodeSegment(posA2StartPos, posA2TargetPos)
+
+        if dummmySegA1.minSeperation(dummmySegA2) < MIN_SEPERATION_MM:
+            return None
+        
+        return SearchState(posA1TargetIndex, posA2TargetIndex, self.parentState.bitmap, self.parentState.depth + 1)
+
+
+
+        raise NotImplementedError()
 
     def next(self) -> SearchState:
         # so what we want to do is generate states in the following order:
         #   1. generate all states where both agents can print something
         #   2. generate all states where one agent can print something
-        #           and the other agent is either NOP or movement
-        #   3. generate all states where both agents are movement
-        #           or one agent moves and the other is NOP
+        #       and the other is NO-OP
+        #   3. generate all states where one agent can print something
+        #       and the other is moving to a new location
+        #   4. generate all states where one agent are movement
+        #       and the other is NOP
+        #   5. generate all states where both agents are moving to new locations
         #   There may be some implied priority in 2/3 b/t NOP and movement
         #       but thats a future problem
         global LAYER_SEGMENTS_LIST
         global LAYER_POS_LIST
 
-        if self.mode == 1:
-            try:
-                while True:
-                    segA1Index, segA2Index = self._getNext1()
+        try:
+            functionPointers = [0, self._doMode1Check, self._doMode2Check, self._doMode3Check,
+                                self._doMode4Check, self._doMode5Check]
+            while True:
+                t = functionPointers[self.mode]()
+                if t != None:
+                    return t
+        except StopIteration:
+            # switch to mode 2 and recurse
+            self.mode += 1
+            if(self.mode > 5):
+                raise StopIteration()
+            self.i = None
+            return self.next()
 
-                    # check if the state was already printed
-                    if self.parentState.bitmap[segA1Index] == 1:
-                        # it was already printed, so this transition is not valid
-                        continue
-                    if self.parentState.bitmap[segA2Index] == 1:
-                        continue
 
-                    # get the segment objects
-                    segA1 = LAYER_SEGMENTS_LIST[segA1Index]
-                    segA2 = LAYER_SEGMENTS_LIST[segA2Index]
+class VisitedStates():
+    def __init__(self) -> None:
+        self.d = {}
 
-                    # check if the segments are separated by the proper amount
-                    if segA1.minSeperation(segA2) < MIN_SEPERATION_MM:
-                        # there is not enough seperation
-                        continue
+    def stateIn(self, state: SearchState) -> bool:
+        h = hash(state)
+        if h not in self.d:
+            return False
+        else:
+            return state.get_pos_tuples() in self.d[h]
 
-                    # segment are separated by enough
-                    #   which implies the endpoints are separated by enough
-                    # so lets create a new state
-                    newBitmap = deepcopy(self.parentState.bitmap)
-                    newBitmap[segA1Index] = 1
-                    newBitmap[segA2Index] = 1
-
-                    oldA1Pos = LAYER_POS_LIST[self.parentState.a1Index]
-                    oldA2Pos = LAYER_POS_LIST[self.parentState.a2Index]
-
-                    # get the point opposite where we start
-                    newA1Pos = (segA1.point if segA1.pointTwo == oldA1Pos else segA1.pointTwo)
-                    newA2Pos = (segA2.point if segA2.pointTwo == oldA2Pos else segA2.pointTwo)
-
-                    #TODO - this could be pre-computed 
-                    newA1Index = LAYER_POS_LIST.index(newA1Pos)
-                    newA2Index = LAYER_POS_LIST.index(newA2Pos)
-
-                    return SearchState(newA1Index, newA2Index, newBitmap)
-            except StopIteration:
-                # switch to mode 2 and recurse
-                self.mode = 2
-                self.i = None
-                return self.next()
-        elif self.mode == 2:
-            # todo - implement mode 2
-            try:
-                segA1Index, segA2Index = self._getNext2()
-                # one of the two is none,
-                #   the other is an segment index incident on one of the positions
-
-                raise NotImplementedError()
-            except StopIteration:
-                # switch to mode 3 and recurse
-                self.mode = 3
-                self.i = None
-                return self.next()
-        else: # mode == 3
-            #TODO - implement mode 3    
-            raise NotImplementedError()
-
+    def addState(self, state: SearchState) -> None:
+        if self.stateIn(state):
+            return
+        
+        h = hash(state)
+        if h not in self.d:
+            self.d[h] = set()
+        self.d[h].add(state.get_pos_tuples())
 
 def isGoalSate(state : SearchState) -> bool:
     '''Return True if this is a goal state'''
@@ -291,12 +509,44 @@ def simpleIterativeAStar(segmentList : List[gcodeSegment]) -> int:
 
     print("Layer setup complete")
 
-    # while True:
-    #     print(ss_gen.next())
 
-    ss = ss_gen.next()
+    pq = PriorityQueue()
+    vs = VisitedStates()
+    pq.push(ss_gen)
+    foundGoal = False
+    maxDepth = -1
 
+    while len(pq) > 0:
+        thisGen : OrderedGenerator = pq.pop()
+        try:
+            thisState = thisGen.next()
+        except StopIteration:
+            # there is no next state
+            continue
 
-    sss = SuccessorStateOrderedGenerator(ss)
-    while True:
-        print(sss.next())
+        try:
+            pq.push(thisGen)
+        except StopIteration:
+            # there will be no next state
+            pass
+
+        if isGoalSate(thisState):
+            print(f"Found a goal state at depth {thisState.depth}")
+            foundGoal = True
+            break
+            
+        if vs.stateIn(thisState):
+            continue
+        
+        vs.addState(thisState)
+
+        if thisState.depth > maxDepth:
+            maxDepth = thisState.depth
+            print(f"Found new max depth {maxDepth}, q size {len(pq)}, {thisState}")
+
+        ss = SuccessorStateOrderedGenerator(thisState)
+
+        pq.push(ss)
+
+    if foundGoal is False:
+        print("The algorithm returned false before a goal state could be found")

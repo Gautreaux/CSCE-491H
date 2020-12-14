@@ -21,10 +21,6 @@ class PriorityQueue:
     def pop(self) -> not None:
         # heappop will raise an index error if needed
         return heapq.heappop(self.heap)
-
-    def updateFront(self) -> None:
-        'Pop the front element and reinsert it to update the costs'
-        self.push(self.pop())
     
     def __len__(self) -> int:
         return len(self.heap)
