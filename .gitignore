@@ -6,5 +6,7 @@ layerSampleSet/*
 */__pycache__/
 
 .vs/*
-.vscode/*
 __pycache__/*
+
+*.o
+*.exe
