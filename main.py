@@ -1,4 +1,5 @@
 
+from matplotlib.pyplot import waitforbuttonpress
 from fileIterables import allFilesInRecurseByType, getNameFromPath
 from gcodeParser import gcodePathParser
 from recomputeFramework import BatchRecompute
@@ -7,6 +8,7 @@ from recomputeFramework import BatchRecompute
 from recomputeFundamentals import PrintTimeRecompute, PrintTravelTimeRecompute
 from recomputeODonnell import InwardODonnell, InwardODonnellSplit
 from recomputeGraph import GraphRecompute
+from iterativeAStar import IterativeAStar
 
 SAMPLE_DIR = "gcodeSampleSet"
 FILE_TYPE = "gcode"
@@ -23,7 +25,8 @@ if __name__ == "__main__":
     # worker.addRecomputeModel(PrintTravelTimeRecompute)
     # worker.addRecomputeModel(InwardODonnell)
     # worker.addRecomputeModel(InwardODonnellSplit)
-    worker.addRecomputeModel(GraphRecompute)
+    # worker.addRecomputeModel(GraphRecompute)
+    worker.addRecomputeModel(IterativeAStar)
 
     parseValid = {}
     recomputeResults = {}

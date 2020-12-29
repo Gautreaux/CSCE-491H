@@ -1,6 +1,8 @@
 # implements a generic version of A*
 from queue import PriorityQueue
 
+# DEPRECIATED?
+
 # stateGenerator - a function that
 #       when given None returns a list of the starting state(s)
 #       when given a state returns a list of following state(s)

@@ -89,6 +89,23 @@ class LineSegment(Line):
         )
 
         return min(distList)
+
+    # TODO - testing required
+    def minSeperationPoint(self, point) -> int:
+        """get the minimum seperation between the line and a point"""
+
+        if self.isOnSegment(point) is True:
+            return 0
+
+        m = min(pointDistance(self.point, point), pointDistance(self.pointTwo, point))
+
+        p = self.getProjectionPoint(point)
+
+        if self.isOnSegment(p):
+            return min(pointDistance(point, p), m)
+        else:
+            return m
+
     
     def reverse(self):
         t = self.point
@@ -151,6 +168,9 @@ if __name__ == "__main__":
 
     assert(segMin1.minSeperation(segMin2) == 1)
     assert(segMin1.minSeperation(segMin3) == 0)
+
+    assert(segMin2.minSeperationPoint((0,0,0)) == 1)
+    assert(segMin2.minSeperationPoint((0,0,1)) == 0)
 
     # TODO - tons of unit test
 
