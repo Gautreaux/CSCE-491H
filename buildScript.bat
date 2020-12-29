@@ -1,9 +1,10 @@
-REM basically just build/test in subdir and then copy to current dir
+REM basically build/test in subdir and then copy to current dir
 @echo off
 echo --------- Starting Build Process ------------
 
+REM Move into the sub directory where the cpp files and stuff are located
 cd cpp_impl
-REM # call make with added debug information present
+REM call make with added debug information if present
 if "%~1" == "" (
     ECHO NO COMMMAND LINE ARGS
     ECHO \n
@@ -25,6 +26,9 @@ if %makeExit% NEQ 0 (
     exit /B %makeExit%
 )
 
+REM TODO - this is a good place where tests could be run if needed
+
+REM COPY the EXE from the sub directory to the main one
 set movePath=%CD%\cpp_impl\Main.exe 
 MOVE /Y %movePath%
 
@@ -37,5 +41,4 @@ if %moveExit% NEQ 0 (
 )
 
 ECHO ------------ Build  Sucessful ---------------
-
 exit /B 0

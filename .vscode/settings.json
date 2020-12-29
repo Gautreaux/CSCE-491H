@@ -1,6 +1,16 @@
 {
     "python.pythonPath": "C:\\Users\\sgaut\\AppData\\Local\\Programs\\Python\\Python38\\python.exe",
     "cSpell.words": [
-        "heapq"
-    ]
+        "heapq",
+        "stod"
+    ],
+    "files.associations": {
+        "*.h": "cpp",
+        "xstring": "cpp",
+        "initializer_list": "cpp",
+        "vector": "cpp",
+        "xiosbase": "cpp",
+        "xutility": "cpp",
+        "iosfwd": "cpp"
+    }
 }
