@@ -9,7 +9,13 @@ class RecomputeState{
 private:
     Point3 agent1Position;
     Point3 agent2Position;
-    int stepDepth; // number of successor states back to the goal
+    unsigned int stepDepth; // number of successor states back to the goal
     DynamicBitset bitset;
 public:
+
+    // return estimated best-case distance to the goal
+    unsigned int distToGoalEst(void) const;
+
+    // return estimated best-case total path length
+    unsigned int totalPathLenEst(void) const;
 };

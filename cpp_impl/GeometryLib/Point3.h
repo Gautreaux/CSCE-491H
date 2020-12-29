@@ -30,6 +30,10 @@ inline bool operator==(const Point3& lhs, const Point3& rhs){
     return true;
 }
 
+inline bool operator!=(const Point3& lhs, const Point3& rhs){
+    return !(lhs == rhs);
+}
+
 inline Point3 operator-(const Point3& lhs, const Point3& rhs){
     return Point3(lhs.getX() - rhs.getX(), lhs.getY() - rhs.getY(), lhs.getZ() - rhs.getZ());
 }

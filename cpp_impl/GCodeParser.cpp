@@ -14,6 +14,40 @@ GCodeParser::GCodeParser(const std::string filePath){
 #ifdef DEBUG
     printf("Parsing %s for file %s\n", valid ? "successful" : "failed", filePath.c_str());
 #endif
+    if(valid == false){return;}
+
+    // simple checks
+    //  this could be more efficient, but whatever
+    valid = isMonotonicIncreasingZ() && isZSlicedPrint() && isContinuousPrint();
+#ifdef DEBUG
+    printf("Post-Parse Checks: %s\n", valid ? "Passing" : "Failed");
+#endif      
+    if(valid == false){
+#ifdef DEBUG
+        // not the most efficient, but shouldn't be run so thats cool
+        //  also, the compiler shouldn't recognize/cache results?
+        printf("\tMonotonic increasing z: %s\n", isMonotonicIncreasingZ() ? "Passing" : "Failed");
+        printf("\tZ-Sliced Print: %s\n", isZSlicedPrint() ? "Passing" : "Failed");
+        printf("\tContinuous Print: %s\n", isContinuousPrint() ? "Passing" : "Failed");
+#endif
+        return;
+    }
+
+
+    // build the zLayers
+    //  assumes that isMonotonicIncreasingZ() is true
+    zLayers.empty();
+    zLayers.push_back(segmentsList[0].getStartPoint().getZ());
+    for(auto segment : segmentsList){
+        auto t = segment.getStartPoint().getZ();
+        if(t > zLayers.back()){
+            zLayers.push_back(t);
+        }
+        t = segment.getEndPoint().getZ();
+        if(t > zLayers.back()){
+            zLayers.push_back(t);
+        }
+    }
 }
 
 bool GCodeParser::parseFile(const std::string filePath){
@@ -190,3 +224,90 @@ GCodeParser::UnrecognizedCommandException::UnrecognizedCommandException(const st
         problemLine(line), problemToken(token) 
 {
 };
+
+bool GCodeParser::isMonotonicIncreasingZ(void) const {
+    double lastZ = segmentsList[0].getStartPoint().getZ();
+
+    for(auto segment : segmentsList){
+        if(lastZ > segment.getStartPoint().getZ()){
+            return false;
+        }else if(lastZ < segment.getStartPoint().getZ()){
+            lastZ = segment.getStartPoint().getZ();
+        }
+
+        if(lastZ > segment.getEndPoint().getZ()){
+            return false;
+        }else if(lastZ < segment.getEndPoint().getZ()){
+            lastZ = segment.getEndPoint().getZ();
+        }
+    }
+    return true;
+}
+
+bool GCodeParser::isZSlicedPrint(void) const {
+    for(auto segment : segmentsList){
+        if(segment.isPrintSegment() == true && segment.isZParallel() == false){
+            return false;
+        }
+    }
+    return true;
+}
+
+bool GCodeParser::isContinuousPrint(void) const {
+    Point3 lastPos = segmentsList[0].getStartPoint();
+
+    for(auto segment : segmentsList){
+        if(segment.getStartPoint() != lastPos){
+            return false;
+        }
+        lastPos = segment.getEndPoint();
+    }
+    return true;
+}
+
+const GCodeSegment& GCodeParser::at(unsigned int i) const{
+    if(i < 0 || i > numberSegments()){
+        throw std::out_of_range("");
+    }
+
+    return segmentsList[i];
+}
+
+unsigned int GCodeParser::getLayerStartIndex(double zLayerTarget) const {
+    //TODO - could be a binary search or something more efficient, because
+    //requires segments to be in monotonic increasing order
+
+    for(int i = 0; i < segmentsList.size(); i++){
+        const GCodeSegment& gcs = segmentsList.at(i);
+        if(gcs.isZParallel()){
+            auto z = gcs.getStartPoint().getZ();
+            if(z == zLayerTarget){
+                return i;
+            }else if(z > zLayerTarget){
+                break;
+            }
+        }
+    }
+
+    throw std::runtime_error("Could not match provided zLayer to one in file");
+}
+
+
+unsigned int GCodeParser::getLayerEndIndex(double zLayerTarget) const {
+    //TODO - could be a binary search or something more efficient, because
+    //requires segments to be in monotonic increasing order
+
+    for(int i = segmentsList.size()-1; i >= 0; i--){
+        const GCodeSegment& gcs = segmentsList.at(i);
+        if(gcs.isZParallel()){
+            auto z = gcs.getStartPoint().getZ();
+            if(z == zLayerTarget){
+                return i;
+            }else if(z < zLayerTarget){
+                break;
+            }
+        }
+    }
+
+    throw std::runtime_error("Could not match provided zLayer to one in file");
+}

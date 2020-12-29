@@ -26,6 +26,12 @@ public:
     bool inline isFull(void) const {return setCount == numBits;}
     bool inline isEmpty(void) const {return setCount == 0;}
 
+    // return the number of bits that are set
+    bool inline getSetCount(void) const {return setCount;}
+
+    // return the number of bits that are not set
+    bool inline getUnsetCount(void) const {return numBits - setCount;}
+
     //The memory size of this object
     // for something i'm planning later
     unsigned int inline memorySize(void) const {return sizeof(DynamicBitset) + DBS_NUM_BYTES;}

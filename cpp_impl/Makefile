@@ -7,7 +7,8 @@ CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c -o $@ $<
 
 EXECUTABLE=Main.exe
 
-.PHONY: $(EXECUTABLE)
+# declaring a phony forces the top level to always rebuild
+.PHONY: $(EXECUTABLE) Main.o
 
 all : $(EXECUTABLE)
 
@@ -16,11 +17,15 @@ force : clean $(EXECUTABLE)
 clean :
 	del /S *.o
 
+# pretty much out of date as soon as it is written
 manual_all :
 	g++ -g -DDEBUG -o $(EXECUTABLE) Main.cpp GCodeSegment.cpp GCodeParser.cpp GeometryLib/Line.cpp GeometryLib/LineSegment.cpp GeometryLib/Point3.cpp GeometryLib/Vector3.cpp
 
-$(EXECUTABLE) : Main.o GCodeParser.o RecomputeState.o
+$(EXECUTABLE) : Main.o GCodeParser.o PrunedAStar.o
 	$(CPP_COMP_COM) -o $(EXECUTABLE) *.o
+
+Main.o : Main.cpp GCodeParser.o PrunedAStar.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # geometry files 
 GCodeParser.o : GCodeParser.cpp GCodeParser.h GCodeSegment.o Point3.o pch.o
@@ -45,10 +50,13 @@ pch.o : pch.cpp pch.h
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # a* files
-RecomputeState.o : RecomputeState.cpp RecomputeState.h DynamicBitset.o Point3.o
+PrunedAStar.o : PrunedAStar.cpp PrunedAStar.h RecomputeState.o GCodeParser.o pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-DynamicBitset.o : UtilLib/DynamicBitset.cpp UtilLib/DynamicBitset.h
+RecomputeState.o : RecomputeState.cpp RecomputeState.h DynamicBitset.o Point3.o pch.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+DynamicBitset.o : UtilLib/DynamicBitset.cpp UtilLib/DynamicBitset.h pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # Uses builtin .cpp -> .o translation instead
