@@ -1,9 +1,9 @@
 CXX:=g++ # which compiler to use
-CPPFLAGS=# empty default value for GCC flags
+CPPFLAGS=# empty default value for GCC flags, can be overriden on command line
 CPPSTD=-std=c++11# which c++ version to use
 
 CPP_COMP_COM=$(CXX) $(CPPFLAGS) $(CPPSTD)
-CPP_LINK_ALL_REQUIRED=$(CPP_COMP_COM) -c -o $@ $<
+CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c -o $@ $<
 
 EXECUTABLE=Main.exe
 
@@ -19,31 +19,37 @@ clean :
 manual_all :
 	g++ -g -DDEBUG -o $(EXECUTABLE) Main.cpp GCodeSegment.cpp GCodeParser.cpp GeometryLib/Line.cpp GeometryLib/LineSegment.cpp GeometryLib/Point3.cpp GeometryLib/Vector3.cpp
 
-# echo "BUILD TRIGGERED (cpp_impl)"
-# echo $(CPPFLAGS)
-$(EXECUTABLE) : Main.o GCodeParser.o
+$(EXECUTABLE) : Main.o GCodeParser.o RecomputeState.o
 	$(CPP_COMP_COM) -o $(EXECUTABLE) *.o
 
+# geometry files 
 GCodeParser.o : GCodeParser.cpp GCodeParser.h GCodeSegment.o Point3.o pch.o
-	$(CPP_LINK_ALL_REQUIRED)
+	$(CC_COMPLIE_NO_LINK_AUTO)
 
 GCodeSegment.o : GCodeSegment.cpp GCodeSegment.h LineSegment.o pch.o
-	$(CPP_LINK_ALL_REQUIRED)
+	$(CC_COMPLIE_NO_LINK_AUTO)
 
 LineSegment.o : GeometryLib/LineSegment.cpp GeometryLib/LineSegment.h Line.o Point3.o pch.o
-	$(CPP_LINK_ALL_REQUIRED)
+	$(CC_COMPLIE_NO_LINK_AUTO)
 
 Line.o : GeometryLib/Line.cpp GeometryLib/Line.h Point3.o Vector3.o pch.o
-	$(CPP_LINK_ALL_REQUIRED)
+	$(CC_COMPLIE_NO_LINK_AUTO)
 
 Vector3.o : GeometryLib/Vector3.cpp GeometryLib/Vector3.h Point3.o pch.o
-	$(CPP_LINK_ALL_REQUIRED)
+	$(CC_COMPLIE_NO_LINK_AUTO)
 
 Point3.o : GeometryLib/Point3.cpp GeometryLib/Point3.h pch.o
-	$(CPP_LINK_ALL_REQUIRED)
+	$(CC_COMPLIE_NO_LINK_AUTO)
 
 pch.o : pch.cpp pch.h
-	$(CPP_LINK_ALL_REQUIRED)
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+# a* files
+RecomputeState.o : RecomputeState.cpp RecomputeState.h DynamicBitset.o Point3.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+DynamicBitset.o : UtilLib/DynamicBitset.cpp UtilLib/DynamicBitset.h
+	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # Uses builtin .cpp -> .o translation instead
 #	which is basically this rule anyway
