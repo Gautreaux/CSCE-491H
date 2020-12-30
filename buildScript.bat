@@ -40,5 +40,6 @@ if %moveExit% NEQ 0 (
     exit /B %moveExit%
 )
 
+ECHO %date% %time%
 ECHO ------------ Build  Sucessful ---------------
 exit /B 0

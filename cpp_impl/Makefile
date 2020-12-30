@@ -50,13 +50,20 @@ pch.o : pch.cpp pch.h
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # a* files
-PrunedAStar.o : PrunedAStar.cpp PrunedAStar.h RecomputeState.o GCodeParser.o pch.o
+PrunedAStar.o : PrunedAStar.cpp PrunedAStar.h RecomputeState.o GCodeParser.o BiMap.o PriorityQueue.o pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 RecomputeState.o : RecomputeState.cpp RecomputeState.h DynamicBitset.o Point3.o pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
+# util files
 DynamicBitset.o : UtilLib/DynamicBitset.cpp UtilLib/DynamicBitset.h pch.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+BiMap.o : UtilLib/BiMap.cpp UtilLib/BiMap.h pch.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+PriorityQueue.o : UtilLib/PriorityQueue.cpp UtilLib/PriorityQueue.h pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # Uses builtin .cpp -> .o translation instead

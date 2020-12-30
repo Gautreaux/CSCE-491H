@@ -114,6 +114,7 @@ bool GCodeParser::parseFile(const std::string filePath){
             if (split.number == 20){
                 // G20 - switch units type to inches
                 currentUnits = GCodeUnits::INCHES;
+                throw UnrecognizedCommandException(line, lineTokens[0]);
             }else if (split.number == 21){
                 // G21 - switch units type to millimeters
                 currentUnits = GCodeUnits::MILLIMETERS;

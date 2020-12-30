@@ -11,6 +11,11 @@
         "vector": "cpp",
         "xiosbase": "cpp",
         "xutility": "cpp",
-        "iosfwd": "cpp"
+        "iosfwd": "cpp",
+        "iostream": "cpp",
+        "map": "cpp",
+        "xtree": "cpp",
+        "utility": "cpp",
+        "functional": "cpp"
     }
 }

@@ -2,16 +2,17 @@
 
 #include "../pch.h"
 
-#define DBS_SOC sizeof(char)
+#define DBS_SOC 8
 #define DBS_NUM_BYTES ((numBits % DBS_SOC) ? numBits / DBS_SOC + 1 : numBits / DBS_SOC)
 
 class DynamicBitset{
 private:
     unsigned int numBits;
-    void* bitset;
+    char* bitset;
     unsigned int setCount; // number of bits set
 public:
     DynamicBitset(const unsigned int size);
+    DynamicBitset(const DynamicBitset& other);
     ~DynamicBitset(void);
 
     //get the value of the bit at index i

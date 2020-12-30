@@ -3,14 +3,26 @@
 DynamicBitset::DynamicBitset(unsigned int size){
     numBits = size;
     setCount = 0;
-    bitset = malloc(DBS_NUM_BYTES);
+    bitset = new char[DBS_NUM_BYTES];
+    //printf("DBS Alloc: %p @ %p\n", bitset, this);
     assert(bitset != nullptr);
     memset(bitset, 0, DBS_NUM_BYTES);
 }
 
+DynamicBitset::DynamicBitset(const DynamicBitset& other){
+    numBits = other.numBits;
+    setCount = other.setCount;
+    bitset = new char[DBS_NUM_BYTES];
+    //printf("DBS Alloc: %p @ %p\n", bitset, this);
+    assert(bitset != nullptr);
+    memcpy(bitset, other.bitset, DBS_NUM_BYTES);
+}
+
 DynamicBitset::~DynamicBitset(void){
     if(bitset != nullptr){
-        free(bitset);
+        //printf("DBS DeAlloc: %p @ %p\n", bitset, this);
+        delete[] bitset;
+        bitset = nullptr;
     }
 }
 

@@ -67,6 +67,7 @@ public:
 
     //get the number of segments that were parsed out
     int numberSegments(void) const {return segmentsList.size();}
+    int numberZLayers(void) const {return zLayers.size();}
 
     //return the validity of the file
     bool inline isValid(void) const {return valid;}
