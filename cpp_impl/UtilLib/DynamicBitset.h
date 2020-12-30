@@ -11,9 +11,13 @@ private:
     char* bitset;
     unsigned int setCount; // number of bits set
 public:
+    DynamicBitset(void);
     DynamicBitset(const unsigned int size);
     DynamicBitset(const DynamicBitset& other);
     ~DynamicBitset(void);
+
+    DynamicBitset& operator=(const DynamicBitset& other);
+    DynamicBitset& operator=(DynamicBitset&& other);
 
     //get the value of the bit at index i
     bool at(const unsigned int i) const;
@@ -28,10 +32,10 @@ public:
     bool inline isEmpty(void) const {return setCount == 0;}
 
     // return the number of bits that are set
-    bool inline getSetCount(void) const {return setCount;}
+    unsigned int inline getSetCount(void) const {return setCount;}
 
     // return the number of bits that are not set
-    bool inline getUnsetCount(void) const {return numBits - setCount;}
+    unsigned int inline getUnsetCount(void) const {return numBits - setCount;}
 
     //The memory size of this object
     // for something i'm planning later

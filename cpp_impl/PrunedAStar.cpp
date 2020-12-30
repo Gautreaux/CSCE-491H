@@ -103,6 +103,50 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
     // }
 #endif
 
+    unsigned int expandedStates = 0;
+    bool foundGoal = false;
+
+    //TODO - the major loop
+
+    while(pq.size() > 0){
+        const RecomputeState& state = pq.top();
+        expandedStates += 1;
+
+        //check if goal
+        if(state.getBitset().getUnsetCount() == 0){
+            const DynamicBitset& bs = state.getBitset();
+            printf("GOAL BS: size %d, set count %d, unset count %d\n", bs.size(), bs.getSetCount(), bs.getUnsetCount());
+            printf("Start BS: size %d, set count %d, unset count %d\n", startBitset.size(), startBitset.getSetCount(), startBitset.getUnsetCount());
+            foundGoal = true;
+            break;
+        }
+
+        //check if already explored
+        //if(isAlreadyExplored == false){
+            //expand additional states
+        //}
+
+        pq.pop();
+        //printf("DBG: size %d\n", pq.size());
+#ifdef DEBUG
+        //reporting
+        if(expandedStates % 50 == 0){
+            printf("Total %d states expanded.\n", expandedStates);
+        }
+#endif
+    }
+
+    if(foundGoal == false){
+#ifdef DEBUG
+        printf("Layer explored %d states and did not find a goal\n", expandedStates);
+#endif
+        //TODO - this should probably raise a runtime exception
+        return;
+    }
+
+#ifdef DEBUG
+    printf("Layer successfully found a goal after %d states at depth %d.\n", expandedStates, pq.top().getDepth());
+#endif
 }
 
 void prunedAStar(const GCodeParser& gcp){

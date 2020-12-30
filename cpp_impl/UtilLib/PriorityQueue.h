@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <vector>
 
 //DataType must support std::swap and copy-assignment
 //maximizing queue
@@ -12,9 +13,7 @@ class PriorityQueue{
 private:
     //data members
     ComparatorType comparator; //called as less than
-    DataType* buffer;
-    unsigned int maxSize;
-    unsigned int currentSize;
+    std::vector<DataType> buffer;
 
     //helper functions
     unsigned int inline getParentUnsafe(const unsigned int i) const {return (i-1)/2;}
@@ -32,14 +31,14 @@ private:
         }
     }
     void inline downheap(const unsigned int i){
-        if(i >= currentSize){
+        if(i >= buffer.size()){
             return;
         }
 
         unsigned int ri = getRightChildUnsafe(i);
         unsigned int li = getLeftChidUnsafe(i);
 
-        if(ri < currentSize){
+        if(ri < buffer.size()){
             if(comparator(buffer[i], buffer[li]) && comparator(buffer[i], buffer[ri])){
                 //i < li and i < ri but ri ?<? li
                 if(comparator(buffer[li], buffer[ri])){
@@ -65,7 +64,7 @@ private:
                 //li < i and ri < i but ri ?<? li
                 //do nothing
             }
-        }else if(li < currentSize){
+        }else if(li < buffer.size()){
             // only li is valid
             if(comparator(buffer[i], buffer[li])){
                 std::swap(buffer[i], buffer[li]);
@@ -85,57 +84,50 @@ public:
         //     const std::string& getMessage(void) {return message;}
     };
 
-    PriorityQueue() : comparator() , maxSize(0), currentSize(0), buffer(nullptr){}
+    PriorityQueue() : comparator(){}
 
-    PriorityQueue(const ComparatorType& c) : maxSize(0), currentSize(0), buffer(nullptr) {
+    PriorityQueue(const ComparatorType& c) {
         comparator = c;
     }
 
-    unsigned int inline size(void) const {return currentSize;}
-    unsigned int inline empty(void) const {return currentSize == 0;}
+    ~PriorityQueue(){
+        while(empty() == false){
+            pop();
+        }
+    }
+
+    unsigned int inline size(void) const {return buffer.size();}
+    unsigned int inline empty(void) const {return buffer.size() == 0;}
 
     const DataType& top() const {
-        if(currentSize <= 0){
+        if(buffer.size() <= 0){
             throw PriorityQueue::EmptyQueueException();
         }
         return buffer[0];
     }
 
     void pop(void) {
-        if(currentSize <= 0){
+        if(buffer.size() <= 0){
             throw PriorityQueue::EmptyQueueException();
-        } else if(currentSize == 1){
-            currentSize = 0;
+        } else if(buffer.size() == 1){
+            buffer.pop_back();
             return;
         }
 
-        buffer[0] = buffer[currentSize];
-        currentSize--;
+        buffer[0] = std::move(buffer.back());
+        buffer.pop_back();
         downheap(0);
     }
 
     void push(const DataType& dt){
-        if(currentSize == maxSize){
-            //realloc
-            unsigned int newSize = (currentSize == 0 ? 1 : currentSize);
-            newSize *= 2;
-            auto t = realloc(buffer, sizeof(DataType)*newSize);
-            if(t == nullptr){
-#ifdef DEBUG
-                printf("realloc failed for target size %d\n", newSize);
-#endif
-                throw std::runtime_error("Realloc failed during priority queue push");
-            }
-            buffer = (DataType*)t;
-            maxSize = newSize;
-        }
-        buffer[currentSize++] = dt;
+        buffer.push_back(dt);
+        upheap(buffer.size()-1);
     }
 
     const DataType& at(unsigned int i){
-        if(currentSize <= 0){
+        if(buffer.size() <= 0){
             throw PriorityQueue::EmptyQueueException();
-        }else if(i >= currentSize){
+        }else if(i >= buffer.size()){
             //TODO - should be an out of bounds or something idk
             throw PriorityQueue::EmptyQueueException();
         }

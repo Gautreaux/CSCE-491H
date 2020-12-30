@@ -1,5 +1,10 @@
 #include "DynamicBitset.h"
 
+DynamicBitset::DynamicBitset(void) :
+    numBits(0), setCount(0), bitset(nullptr)
+{
+}
+
 DynamicBitset::DynamicBitset(unsigned int size){
     numBits = size;
     setCount = 0;
@@ -9,6 +14,7 @@ DynamicBitset::DynamicBitset(unsigned int size){
     memset(bitset, 0, DBS_NUM_BYTES);
 }
 
+//copy constructor
 DynamicBitset::DynamicBitset(const DynamicBitset& other){
     numBits = other.numBits;
     setCount = other.setCount;
@@ -24,6 +30,36 @@ DynamicBitset::~DynamicBitset(void){
         delete[] bitset;
         bitset = nullptr;
     }
+}
+
+// copy assignment
+DynamicBitset& DynamicBitset::operator=(const DynamicBitset& other){
+    if(bitset != nullptr){
+        delete[] bitset;
+        bitset = nullptr;
+    }
+
+    numBits = other.numBits;
+    setCount = other.setCount;
+    //printf("DBS Alloc: %p @ %p\n", bitset, this);
+    assert(bitset != nullptr);
+    memcpy(bitset, other.bitset, DBS_NUM_BYTES);
+}
+
+//move assignment
+DynamicBitset& DynamicBitset::operator=(DynamicBitset&& other){
+    if(bitset != nullptr){
+        delete[] bitset;
+        bitset = nullptr;
+    }
+
+    numBits = other.numBits;
+    setCount = other.setCount;
+    bitset = other.bitset;
+
+    other.bitset = nullptr;
+    other.numBits = 0;
+    other.setCount = 0;
 }
 
 bool DynamicBitset::at(const unsigned int i) const {
