@@ -13,8 +13,8 @@ int main(int argc, char ** argv){
     //GCodeParser gcp("cpp_impl/TestingFiles/simpleTest.gcode");
     //GCodeParser gcp("TestingFiles/simpleTest.gcode");
     
-    GCodeParser gcp("cpp_impl/TestingFiles/simpleRecomputable.gcode");
-    //GCodeParser gcp("TestingFiles/simpleRecomputable.gcode");
+    //GCodeParser gcp("cpp_impl/TestingFiles/simpleRecomputable.gcode");
+    GCodeParser gcp("TestingFiles/simpleRecomputable.gcode");
 
     if(gcp){
         printf("Found %d segments in %d layers in the file.\n", gcp.numberSegments(), gcp.numberZLayers());

@@ -96,3 +96,35 @@ bool DynamicBitset::set(const unsigned int i, const bool value){
 
     return toReturn;
 }
+
+bool operator<(const DynamicBitset& lhs, const DynamicBitset& rhs){
+    if(lhs.size() < rhs.size()){
+        return true;
+    }
+    if(lhs.size() > rhs.size()){
+        return false;
+    }
+    //Size matches
+
+    if(lhs.getSetCount() < rhs.getSetCount()){
+        return true;
+    }
+    if(lhs.getSetCount() > rhs.getSetCount()){
+        return false;
+    }
+    //size and set count match
+
+    return lhs.compareBits(rhs) < 0;
+}
+
+bool operator==(const DynamicBitset& lhs, const DynamicBitset& rhs){
+    if(lhs.size() != rhs.size()){
+        return false;
+    }
+
+    if(lhs.getSetCount() != rhs.getSetCount()){
+        return false;
+    }
+
+    return lhs.compareBits(rhs) == 0;
+}

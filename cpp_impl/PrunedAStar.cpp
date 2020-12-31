@@ -1,10 +1,5 @@
 #include "PrunedAStar.h"
 
-// #include <queue>
-#include <vector>
-
-#include "UtilLib/BiMap.h"
-#include "UtilLib/PriorityQueue.h"
 
 class StateCompare {
 public:
@@ -13,6 +8,8 @@ public:
         return &lhs < &rhs;
     }
 };
+
+
 
 void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, const unsigned int layerEndInd){
     //TODO
@@ -43,7 +40,7 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
 
     //construct a position-int bi-map
     //  mostly so that we can get a set of all the positions
-    BiMap<Point3, int> bimapPositionInt;
+    PosIndexBiMap bimapPositionInt;
     unsigned int totalPositions = 0;
     for(auto segIndex : printedSegmentsIndexes){
         auto& sPos = gcp.at(segIndex).getStartPoint();
@@ -60,18 +57,38 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
 
 #ifdef DEBUG
     printf("Layer resolved %d total agent positions\n", totalPositions);
-#endif
-
+    
     // print all the positions in this layer
     // for(auto i = bimapPositionInt.findByABegin(); i != bimapPositionInt.findByAEnd(); i++){
     //     std::cout << i->first << std::endl;
     // }
     // std::cout << std::endl;
+#endif
+
+    //maps a positionIndex to concident segments index
+    // i.e. position (1,1,1) <--> position_index 7 (the bimap above)
+    //  printedSegmentsIndexes[0] --> segIndex[30] --> (1,1,1) to (2,2,2)
+    //then printedSegmentsIndexes[7] = vector(..., 0, ...)
+    //  store the index b/c this maps to the bitmap better
+    PosSegMap positionAdjSegIndexMapping(totalPositions); 
+
+    for(auto segIndex : printedSegmentsIndexes){
+        const GCodeSegment& seg = gcp.at(segIndex);
+        auto& sPos = seg.getStartPoint();
+        auto& ePos = seg.getEndPoint();
+
+        unsigned int sPosIndex = bimapPositionInt.findByA(sPos)->second;
+        unsigned int ePosIndex = bimapPositionInt.findByA(ePos)->second;
+
+        positionAdjSegIndexMapping[sPosIndex].push_back(segIndex);
+        positionAdjSegIndexMapping[ePosIndex].push_back(segIndex);
+    }
 
     //setup the pieces for A*
     // std::priority_queue<RecomputeState, std::vector<RecomputeState>, StateCompare> pq;
     // std::priority_queue<RecomputeState> pq;
     PriorityQueue<RecomputeState> pq;
+    std::set<RecomputeState> visitedSet;
     DynamicBitset startBitset(printedSegmentsIndexes.size());
 
     //generate all the starting points-pairings for this index
@@ -105,6 +122,7 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
 
     unsigned int expandedStates = 0;
     bool foundGoal = false;
+    unsigned int mostCompleteState = 0;
 
     //TODO - the major loop
 
@@ -121,17 +139,21 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
             break;
         }
 
-        //check if already explored
-        //if(isAlreadyExplored == false){
-            //expand additional states
-        //}
+        mostCompleteState = std::max(mostCompleteState, state.getBitset().getSetCount());
+
+        if(visitedSet.insert(state).second){
+            //new element, time to expand
+            updateSearchStates(state, pq, gcp, 
+                    bimapPositionInt, positionAdjSegIndexMapping);
+        }
 
         pq.pop();
         //printf("DBG: size %d\n", pq.size());
 #ifdef DEBUG
         //reporting
         if(expandedStates % 50 == 0){
-            printf("Total %d states expanded.\n", expandedStates);
+            printf("Total %d states expanded. ", expandedStates);
+            printf("Pending states %d; Best state %d/%d printed.\n", pq.size(), mostCompleteState, printedSegmentsIndexes.size());
         }
 #endif
     }
@@ -157,4 +179,60 @@ void prunedAStar(const GCodeParser& gcp){
         //TODO - actually properly compute the start/end
         prunedAStarLayer(gcp, gcp.getLayerStartIndex(*layer), gcp.getLayerEndIndex(*layer));
     }
+}
+
+void updateSearchStates(
+    const RecomputeState& state, PriorityQueue<RecomputeState>& pq, GCodeParser gcp,
+    PosIndexBiMap& bimapPositionIndex, PosSegMap& positionAdjSegIndexMapping)
+{
+    unsigned int a1PosIndex = state.getA1PosIndex(); //shorthand of the position of a1
+    unsigned int a2PosIndex = state.getA2PosIndex(); //shorthand of the position of a2
+
+    Point3 a1Pos = bimapPositionIndex.findByB(a1PosIndex)->second;
+    Point3 a2Pos = bimapPositionIndex.findByB(a2PosIndex)->second;
+
+    //find the state transitions where both agents can move to a new print
+    for(auto a1AdjInd : positionAdjSegIndexMapping[a1PosIndex]){
+        if(state.getBitset().at(a1AdjInd) == 1){
+            continue;
+        }
+        for(auto a2AdjInd : positionAdjSegIndexMapping[a2PosIndex]){
+            if(state.getBitset().at(a2AdjInd) == 1){
+                continue;
+            }
+            if(isValidSegmentsPair(gcp.at(a1AdjInd), gcp.at(a2AdjInd))){
+                //do the update
+
+                //need to find the new ending points
+                //TODO - this could be optimized with some pre work and another vector(s)
+                Point3 a1EndPos = ((a1Pos == gcp.at(a1AdjInd).getStartPoint()) ?
+                                    gcp.at(a1AdjInd).getEndPoint() :
+                                    gcp.at(a1AdjInd).getEndPoint());
+                Point3 a2EndPos = ((a2Pos == gcp.at(a2AdjInd).getStartPoint()) ?
+                                    gcp.at(a2AdjInd).getEndPoint() :
+                                    gcp.at(a2AdjInd).getEndPoint());
+
+                unsigned int a1EndPosIndex = bimapPositionIndex.findByA(a1EndPos)->second;
+                unsigned int a2EndPosIndex = bimapPositionIndex.findByA(a2EndPos)->second;
+
+                //update the bitmap
+                DynamicBitset dbs = state.getBitset();
+                dbs.set(a1AdjInd, 1);
+                dbs.set(a2AdjInd, 1);
+
+                pq.push(RecomputeState(a1EndPosIndex, a2EndPosIndex, state.getDepth()+1, dbs));
+            }
+        }
+    }
+
+    //TODO - more transitions (in no real order)
+    // a1 print, a2 noop
+    // a1 print, a2 move
+    // a2 print, a1 noop
+    // a2 print, a1 move
+    // a1 move, a2 noop
+    // a1 move, a2 move
+    // a2 move, a1 noop
+    // a2 move, a1 move
+    return;
 }

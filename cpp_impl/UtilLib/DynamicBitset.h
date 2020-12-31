@@ -40,4 +40,10 @@ public:
     //The memory size of this object
     // for something i'm planning later
     unsigned int inline memorySize(void) const {return sizeof(DynamicBitset) + DBS_NUM_BYTES;}
+
+    //compare the actual buffers
+    short inline compareBits(const DynamicBitset& other) const {memcmp(bitset, other.bitset, DBS_NUM_BYTES);}
 };
+
+bool operator<(const DynamicBitset& lhs, const DynamicBitset& rhs);
+bool operator==(const DynamicBitset& lhs, const DynamicBitset& rhs);

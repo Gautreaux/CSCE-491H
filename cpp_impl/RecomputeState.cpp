@@ -61,5 +61,38 @@ unsigned int RecomputeState::totalPathLenEst(void) const {
 }
 
 bool operator<(const RecomputeState& lhs, const RecomputeState& rhs){
-    return &lhs < &rhs;
+    if(lhs.getA1PosIndex() < rhs.getA1PosIndex()){
+        return true;
+    }
+    if(lhs.getA1PosIndex() > rhs.getA1PosIndex()){
+        return false;
+    }
+    //A1s Match
+
+    if(lhs.getA2PosIndex() < rhs.getA2PosIndex()){
+        return true;
+    }
+    if(lhs.getA2PosIndex() > rhs.getA2PosIndex()){
+        return false;
+    }
+    //A1 and A2 Match
+
+    //dont care about stepDepth
+
+    return lhs.getBitset() < rhs.getBitset();
+}
+
+bool operator==(const RecomputeState& lhs, const RecomputeState& rhs){
+    //allow for the position indicies to be transposed (for now)
+    if(!(lhs.getA1PosIndex() == rhs.getA1PosIndex() || lhs.getA1PosIndex() == rhs.getA2PosIndex())){
+        return false;
+    }
+
+    if(!(lhs.getA2PosIndex() == rhs.getA1PosIndex() || lhs.getA2PosIndex() == rhs.getA2PosIndex())){
+        return false;
+    }
+
+    //dont really care about the stepDepth ATM
+
+    return lhs.getBitset() == rhs.getBitset();
 }

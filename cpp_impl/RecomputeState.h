@@ -35,3 +35,5 @@ public:
 };
 
 bool operator<(const RecomputeState& lhs, const RecomputeState& rhs);
+
+bool operator==(const RecomputeState& lhs, const RecomputeState& rhs);
