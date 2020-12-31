@@ -14,7 +14,12 @@ int main(int argc, char ** argv){
     //GCodeParser gcp("TestingFiles/simpleTest.gcode");
     
     //GCodeParser gcp("cpp_impl/TestingFiles/simpleRecomputable.gcode");
-    GCodeParser gcp("TestingFiles/simpleRecomputable.gcode");
+    //GCodeParser gcp("TestingFiles/simpleRecomputable.gcode");
+
+    //GCodeParser gcp("cpp_impl/TestingFiles/mediumRecomputable.gcode");
+    GCodeParser gcp("TestingFiles/mediumRecomputable.gcode");
+
+    printf("!!!Important, figure out why this appears non-deterministic on number states expanded!!!\n");
 
     if(gcp){
         printf("Found %d segments in %d layers in the file.\n", gcp.numberSegments(), gcp.numberZLayers());

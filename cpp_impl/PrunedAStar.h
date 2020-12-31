@@ -39,8 +39,7 @@ inline bool isValidPositionPair(const Point3& p1, const Point3& p2){
 // return true if the two segments are far enough apart
 //  also implies that the endpoints are at least this far apart
 inline bool isValidSegmentsPair(const GCodeSegment& s1, const GCodeSegment& s2){
-    //TODO
-    return false;
+    return s1.minSeperationDistance(s2) >= COLLISION_TOLERANCE;
 }
 
 // do the updating of the search states

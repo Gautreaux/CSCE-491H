@@ -63,3 +63,19 @@ std::ostream &operator<<(std::ostream& os, const Point3& point);
 inline double getPointDistance(const Point3& p1, const Point3& p2){
     return sqrt(pow(p2.getX() - p1.getX(), 2) + pow(p2.getY() - p1.getY(), 2) + pow(p2.getZ() - p1.getZ(), 2));
 }
+
+//scalar addition
+inline Point3 operator+(const Point3& lhs, const Point3& rhs){
+    return Point3(lhs.getX() + rhs.getX(), lhs.getY() + rhs.getY(), lhs.getZ() + rhs.getZ());
+}
+
+//scalar mult
+inline Point3 operator*(const Point3& lhs, const Point3& rhs){
+    return Point3(lhs.getX() * rhs.getX(), lhs.getY() * rhs.getY(), lhs.getZ() * rhs.getZ());
+}
+inline Point3 operator*(const Point3& lhs, const double rhs){
+    return Point3(lhs.getX() * rhs, lhs.getY() * rhs, lhs.getZ() * rhs);
+}
+inline Point3 operator*(const double lhs, const Point3& rhs){
+    return rhs * lhs;
+}

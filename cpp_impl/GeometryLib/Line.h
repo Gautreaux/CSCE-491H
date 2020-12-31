@@ -18,4 +18,22 @@ public:
 
     // return true iff segment is parallel to z = 0
     bool inline isZParallel(void) const {return slope.getZ() == 0;}
+
+    //line comparison functions
+    bool isParallel(const Line& other) const;
+    bool isCollinear(const Line& other) const;
+    // bool isSkew(const Line& other) const;
+
+    //return true iff point is on this line
+    bool isOnLine(const Point3& testPoint) const;
+
+    class NoIntersectionException : public std::exception{};
+    class CollinearIntersectionException : public std::exception{};
+
+    //get the point where the lines intersect, 
+    //  raising an exception if they do not, or are collinear
+    Point3 getLineIntersectPoint(const Line& other) const;
+
+    // return the projection of testPoint onto this line
+    Point3 getProjectionPoint(const Point3& testPoint) const;
 };

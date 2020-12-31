@@ -107,6 +107,9 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
         }
     }
 
+    //TODO - should insert another start state(s) where 
+    //  one/both agents are starting without a print operation    
+
 #ifdef DEBUG
     printf("Layer resolved %d total starting position pairs\n", pq.size());
 
@@ -122,7 +125,7 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
 
     unsigned int expandedStates = 0;
     bool foundGoal = false;
-    unsigned int mostCompleteState = 0;
+    unsigned int mostCompleteState = 0; // maximum number of printed segments in any explored state
 
     //TODO - the major loop
 
@@ -132,9 +135,14 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
 
         //check if goal
         if(state.getBitset().getUnsetCount() == 0){
+#ifdef DEBUG
             const DynamicBitset& bs = state.getBitset();
             printf("GOAL BS: size %d, set count %d, unset count %d\n", bs.size(), bs.getSetCount(), bs.getUnsetCount());
             printf("Start BS: size %d, set count %d, unset count %d\n", startBitset.size(), startBitset.getSetCount(), startBitset.getUnsetCount());
+            printf("Depth: %d\n", state.getDepth());
+#endif
+            printf("DING\n");
+            std::cout << std::endl; //force a flush
             foundGoal = true;
             break;
         }
@@ -151,7 +159,7 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
         //printf("DBG: size %d\n", pq.size());
 #ifdef DEBUG
         //reporting
-        if(expandedStates % 50 == 0){
+        if(expandedStates % 5 == 0){
             printf("Total %d states expanded. ", expandedStates);
             printf("Pending states %d; Best state %d/%d printed.\n", pq.size(), mostCompleteState, printedSegmentsIndexes.size());
         }
@@ -215,7 +223,7 @@ void updateSearchStates(
                 unsigned int a1EndPosIndex = bimapPositionIndex.findByA(a1EndPos)->second;
                 unsigned int a2EndPosIndex = bimapPositionIndex.findByA(a2EndPos)->second;
 
-                //update the bitmap
+                //update the bitset
                 DynamicBitset dbs = state.getBitset();
                 dbs.set(a1AdjInd, 1);
                 dbs.set(a2AdjInd, 1);
