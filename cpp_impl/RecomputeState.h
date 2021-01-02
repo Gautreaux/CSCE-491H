@@ -37,3 +37,7 @@ public:
 bool operator<(const RecomputeState& lhs, const RecomputeState& rhs);
 
 bool operator==(const RecomputeState& lhs, const RecomputeState& rhs);
+
+#ifdef DEBUG
+std::ostream &operator<<(std::ostream& os, const RecomputeState& rs);
+#endif

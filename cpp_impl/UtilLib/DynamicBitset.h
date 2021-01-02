@@ -43,6 +43,9 @@ public:
 
     //compare the actual buffers
     short inline compareBits(const DynamicBitset& other) const {memcmp(bitset, other.bitset, DBS_NUM_BYTES);}
+
+    //print the bits of this object in hexadecimal format into the stream
+    void printBitData(std::ostream& os) const;
 };
 
 bool operator<(const DynamicBitset& lhs, const DynamicBitset& rhs);

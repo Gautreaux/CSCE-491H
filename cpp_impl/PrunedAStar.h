@@ -45,4 +45,5 @@ inline bool isValidSegmentsPair(const GCodeSegment& s1, const GCodeSegment& s2){
 // do the updating of the search states
 void updateSearchStates(
     const RecomputeState& state, PriorityQueue<RecomputeState>& pq, GCodeParser gcp,
-    PosIndexBiMap& bimapPositionIndex, PosSegMap& positionAdjSegIndexMapping);
+    PosIndexBiMap& bimapPositionIndex, PosSegMap& positionAdjSegIndexMapping,
+    const std::vector<unsigned int>& printedSegmentsIndexes);
