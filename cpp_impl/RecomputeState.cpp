@@ -12,6 +12,9 @@ RecomputeState::RecomputeState(unsigned int a1PosInd, unsigned int a2PosInd,
     agent1PositionIndex(a1PosInd), agent2PositionIndex(a2PosInd),
     stepDepth(sd), bitset(dbs)
 {
+#ifdef DEBUG_4
+    std::cout <<"Constructed new recompute state " << *this << std::endl;
+#endif
 }
 
 //copy constructor
@@ -96,3 +99,13 @@ bool operator==(const RecomputeState& lhs, const RecomputeState& rhs){
 
     return lhs.getBitset() == rhs.getBitset();
 }
+
+
+#ifdef DEBUG
+std::ostream &operator<<(std::ostream& os, const RecomputeState& rs){
+    os << "A1 " << rs.getA1PosIndex() << ", A2: " << rs.getA2PosIndex() << ", ";
+    os << "Depth " << rs.getDepth() << ", Unset " << rs.getBitset().getUnsetCount();
+
+    return os;
+}
+#endif

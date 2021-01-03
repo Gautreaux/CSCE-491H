@@ -15,8 +15,11 @@ public:
     //LineSegment(const Point3& point, const Slope& slope);
     LineSegment(const Point3& point, const Point3& otherPoint);
 
-    const Point3& getStartPoint(void) const {return point;}
-    const Point3& getEndPoint(void) const {return endPoint;}
+    inline const Point3& getStartPoint(void) const {return point;}
+    inline const Point3& getEndPoint(void) const {return endPoint;}
+    inline const Point3& getOppositeEndpoint(const Point3& p) const {
+        return (p == endPoint ? point : endPoint);
+    }
 
     //return true iff point in on this segment, endpoint inclusive
     bool isOnSegment(const Point3& testPoint) const;

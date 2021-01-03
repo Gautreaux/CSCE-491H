@@ -9,8 +9,10 @@
 
 #include "GCodeParser.h"
 #include "GeometryLib/Point3.h"
+#include "LayerManager.h"
 #include "RecomputeState.h"
 #include "UtilLib/BiMap.h"
+#include "UtilLib/DynamicBitset.h"
 #include "UtilLib/PriorityQueue.h"
 
 typedef BiMap<Point3, unsigned int> PosIndexBiMap;
@@ -24,7 +26,7 @@ typedef std::vector<std::vector<unsigned int>> PosSegMap;
 //  gcp - the parsed GCODE object
 //  layerStartInd - the index of the first segment that is part of this layer
 //  layerEndInd - the index of the last segment that is part of this layer
-void prunedAStarLayer(const GCodeParser& gcp, unsigned int layerStartInd, unsigned int layerEndInd);
+void prunedAStarLayer(const GCodeParser& gcp, double layer);
 
 
 // do a pruned AStar Search for each layer
@@ -44,5 +46,8 @@ inline bool isValidSegmentsPair(const GCodeSegment& s1, const GCodeSegment& s2){
 
 // do the updating of the search states
 void updateSearchStates(
-    const RecomputeState& state, PriorityQueue<RecomputeState>& pq, GCodeParser gcp,
-    PosIndexBiMap& bimapPositionIndex, PosSegMap& positionAdjSegIndexMapping);
+    const RecomputeState& state, const GCodeParser& gcp,
+    const LayerManager& lm, PriorityQueue<RecomputeState>& pq);
+
+//using the gcp and the lm, push all the items into the PriorityQueue
+void generateStartingPositions(const GCodeParser& gcp, const LayerManager& lm, PriorityQueue<RecomputeState>& pq);

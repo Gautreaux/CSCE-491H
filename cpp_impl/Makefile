@@ -50,10 +50,13 @@ pch.o : pch.cpp pch.h
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # a* files
-PrunedAStar.o : PrunedAStar.cpp PrunedAStar.h RecomputeState.o GCodeParser.o BiMap.o PriorityQueue.o pch.o
+PrunedAStar.o : PrunedAStar.cpp PrunedAStar.h RecomputeState.o GCodeParser.o BiMap.o PriorityQueue.o LayerManager.o pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-RecomputeState.o : RecomputeState.cpp RecomputeState.h DynamicBitset.o Point3.o pch.o
+RecomputeState.o : RecomputeState.cpp RecomputeState.h DynamicBitset.o Point3.o LayerManager.o pch.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+LayerManager.o : LayerManager.cpp LayerManager.h GCodeParser.o GCodeSegment.o Point3.o pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # util files

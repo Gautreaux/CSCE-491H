@@ -20,6 +20,9 @@ private:
     unsigned int inline getLeftChidUnsafe(const unsigned int i) const {return (2*i)+1;}
     unsigned int inline getRightChildUnsafe(const unsigned int i) const {return (i+1)*2;}
     void inline upheap(const unsigned int i){
+#ifdef DEBUG_4
+        std::cout << "PQ upheap on " << i << std::endl;
+#endif
         if(i == 0){
             return;
         }
@@ -120,6 +123,9 @@ public:
     }
 
     void push(const DataType& dt){
+#ifdef DEBUG_4
+        std::cout << "PQ Pushed new DataType: " << dt << std::endl;
+#endif
         buffer.push_back(dt);
         upheap(buffer.size()-1);
     }
