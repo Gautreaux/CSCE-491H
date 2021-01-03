@@ -20,7 +20,7 @@ public:
 
 void prunedAStarLayer(const GCodeParser& gcp, double layer){
 
-#ifdef DEBUG_4
+#ifdef DEBUG_3
     printf("Starting prunedAStarLayer\n");
 #endif
     //build the various maps that allow us to index things efficiently
@@ -81,11 +81,13 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
         mostCompleteState = std::max(mostCompleteState, state.getBitset().getSetCount());
 
         if(visitedSet.insert(state).second){
-#ifdef DEBUG_4
+#ifdef DEBUG_3
             std::cout << "Expanding state " << state << std::endl;
 #endif
             //new element, time to expand
-            printf("State Expansion not yet implemeneted\n");
+            updateSearchStates(state, gcp, lm, pq);
+
+            // printf("State Expansion not yet implemeneted\n");
             // updateSearchStates(state, pq, gcp, 
             //         bimapPositionInt, positionAdjSegIndexMapping, 
             //         printedSegmentsIndexes);
@@ -130,12 +132,11 @@ void prunedAStar(const GCodeParser& gcp){
 }
 
 void updateSearchStates(
-    const RecomputeState& state, PriorityQueue<RecomputeState>& pq, GCodeParser gcp,
-    PosIndexBiMap& bimapPositionIndex, PosSegMap& positionAdjSegIndexMapping,
-    const std::vector<unsigned int>& printedSegmentsIndexes)
+    const RecomputeState& state, const GCodeParser& gcp,
+    const LayerManager& lm, PriorityQueue<RecomputeState>& pq)
 {
 
-#ifdef DEBUG_4
+#ifdef DEBUG_3
     std::cout << "Beginning updateSearchStates for " << state << std::endl;
     std::cout << "Beginning recompute state bitset: \n\t";
     state.getBitset().printBitData(std::cout);
@@ -143,111 +144,88 @@ void updateSearchStates(
     unsigned int newStatesAdded = 0;
 #endif
 
-    unsigned int a1PosIndex = state.getA1PosIndex(); //shorthand of the position of a1
-    unsigned int a2PosIndex = state.getA2PosIndex(); //shorthand of the position of a2
+    const Position_Index a1PosIndex = state.getA1PosIndex();
+    const Position_Index a2PosIndex = state.getA2PosIndex();
 
-    Point3 a1Pos = bimapPositionIndex.findByB(a1PosIndex)->second;
-    Point3 a2Pos = bimapPositionIndex.findByB(a2PosIndex)->second;
+    const Point3& a1Pos = lm.getPoint3FromPos(a1PosIndex);
+    const Point3& a2Pos = lm.getPoint3FromPos(a2PosIndex);
 
-#ifdef DEBUG_4
+#ifdef DEBUG_3
     std::cout << "Resolved positions: " << a1Pos << " " << a2Pos << std::endl;
-    std::cout << "A1 adj segments:";
-    for(auto a1AdjInd : positionAdjSegIndexMapping[a1PosIndex]){
-        std::cout << " " << a1AdjInd;
-    }
-    std::cout << std::endl;
-
-    std::cout << "A2 adj segments:";
-    for(auto a2AdjInd : positionAdjSegIndexMapping[a2PosIndex]){
-        std::cout << " " << a2AdjInd;
-    }
-    std::cout << std::endl;
 #endif
 
-    //find the state transitions where both agents can move to a new print
-    //TODO - the get bitest is wrong
-    for(auto a1AdjInd : positionAdjSegIndexMapping[a1PosIndex]){
-
-        //TODO - this is temporary, but we need to translate a segment index into the bitset index
-        unsigned int a1BSIndex;
-        for(unsigned int i=0; i < printedSegmentsIndexes.size(); i++){
-            if(printedSegmentsIndexes[i] == a1AdjInd){
-                a1BSIndex = i;
-                break;
-            }
-        }
-
-#ifdef DEBUG_4
-            std::cout << "a1AdjInd translated to a1BSIndex : " << a1AdjInd << " -> " << a1BSIndex << std::endl;
-#endif
-
-        if(state.getBitset().at(a1BSIndex) == 1){
-#ifdef DEBUG_4
-            std::cout << "Skipping seg (index) for A1 as it was already printed: " << a1AdjInd << std::endl; 
+    //first attempt to find states where both agents can move to a new position
+    for(Bitset_Index a1AdjBitsetIndex : lm.getAdjacentSegments(a1PosIndex)){
+        if(state.getBitset().at(a1AdjBitsetIndex) == 1){
+#ifdef DEBUG_3
+            std::cout << "Skipping seg (bitset_index) for A1 as it was already printed: " << a1AdjBitsetIndex << std::endl; 
 #endif
             continue;
         }
-        for(auto a2AdjInd : positionAdjSegIndexMapping[a2PosIndex]){
-            //TODO - this is temporary, but we need to translate a segment index into the bitset index
-            unsigned int a2BSIndex;
-            for(unsigned int i=0; i < printedSegmentsIndexes.size(); i++){
-                if(printedSegmentsIndexes[i] == a2AdjInd){
-                    a2BSIndex = i;
-                    break;
+        const GCP_Index a1GCPIndex = lm.getGCPFromBitset(a1AdjBitsetIndex);
+        const GCodeSegment& a1Segment = gcp.at(a1GCPIndex);
+
+        for(Bitset_Index a2AdjBitsetIndex : lm.getAdjacentSegments(a2PosIndex)){
+            if(state.getBitset().at(a2AdjBitsetIndex) == 1){
+#ifdef DEBUG_3
+                std::cout << "Skipping seg (bitset_index) for A2 as it was already printed: " << a2AdjBitsetIndex << std::endl; 
+#endif
+                continue;        
+            }
+            const GCP_Index a2GCPIndex = lm.getGCPFromBitset(a2AdjBitsetIndex);
+            const GCodeSegment& a2Segment = gcp.at(a2GCPIndex);
+
+            if(a1AdjBitsetIndex == a2AdjBitsetIndex){
+                assert(a1GCPIndex == a2GCPIndex);
+#ifdef DEBUG_3
+                std::cout << "Skipping move pairs as they are moving the same segment: (bitset) " << a1AdjBitsetIndex << ", (gcp) " << a1GCPIndex << std::endl;
+#endif
+                continue;
+            }
+
+#ifdef DEBUG_3
+            std::cout << "Found new dual-move segments pair (gcp_indexes): " << a1GCPIndex << " " << a2GCPIndex << std::endl;
+#endif
+            if(isValidSegmentsPair(a1Segment, a2Segment)){
+                //time to create the new segments and push it to the pq
+#ifdef DEBUG_3
+                std::cout << "Dual move segments pair passed valid checks (gcp_indexes): " << a1GCPIndex << " " << a2GCPIndex << std::endl;
+#endif
+
+                // this could be made more efficient in some way
+                const Point3& a1NewPos = a1Segment.getOppositeEndpoint(a1Pos);
+                const Point3& a2NewPos = a1Segment.getOppositeEndpoint(a2Pos);
+
+#ifdef DEBUG_3
+                std::cout << "Post-move positions are: " << a1NewPos << " " << a2NewPos << std::endl;
+#endif
+#ifdef DEBUG
+                if(a1NewPos == a2NewPos){
+                    //This is actually a really big deal b/c it means that isValidSegmentsPair is incorrect
+                    std::cout << "ERROR IN validSegments, new pos resolved to same position: " << a1NewPos << std::endl;
+                    std::cout << "    Violating segments: " << a1Segment << " " << a2Segment << std::endl;
+                    continue;
                 }
-            }
-#ifdef DEBUG_4
-            std::cout << "a2AdjInd translated to a2BSIndex : " << a2AdjInd << " -> " << a2BSIndex << std::endl;
 #endif
 
-            if(state.getBitset().at(a2BSIndex) == 1){
-#ifdef DEBUG_4
-                std::cout << "Skipping seg (index) for A2 as it was already printed: " << a2AdjInd << std::endl; 
+                const Position_Index a1NewPosIndex = lm.getPosFromPoint3(a1NewPos);
+                const Position_Index a2NewPosIndex = lm.getPosFromPoint3(a2NewPos);
+
+#ifdef DEBUG_3
+                std::cout << "Post-move position indexes are: " << a1NewPosIndex << " " << a2NewPosIndex << std::endl;
 #endif
-                continue;
-            }
-
-            if(a1AdjInd == a2AdjInd){
-            #ifdef DEBUG_4
-                std::cout << "Skipping move pairs as they are moving same segment: " << a1AdjInd << std::endl;
-            #endif
-                continue;
-            }
-
-#ifdef DEBUG_4
-            std::cout << "Found new dual-move segments pair (indexes): " << a1AdjInd << " " << a2AdjInd << std::endl;
-#endif
-
-            if(isValidSegmentsPair(gcp.at(a1AdjInd), gcp.at(a2AdjInd))){
-                //do the update
-
-#ifdef DEBUG_4
-                std::cout << "Dual-Move segments pair passed valid check (indexes): " << a1AdjInd << " " << a2AdjInd << std::endl;
-#endif
-                //need to find the new ending points
-                //TODO - this could be optimized with some pre work and another vector(s)
-                Point3 a1EndPos = ((a1Pos == gcp.at(a1AdjInd).getStartPoint()) ?
-                                    gcp.at(a1AdjInd).getEndPoint() :
-                                    gcp.at(a1AdjInd).getEndPoint());
-                Point3 a2EndPos = ((a2Pos == gcp.at(a2AdjInd).getStartPoint()) ?
-                                    gcp.at(a2AdjInd).getEndPoint() :
-                                    gcp.at(a2AdjInd).getEndPoint());
-
-                //TODO - not sure if this is correct indexing either
-                unsigned int a1EndPosIndex = bimapPositionIndex.findByA(a1EndPos)->second;
-                unsigned int a2EndPosIndex = bimapPositionIndex.findByA(a2EndPos)->second;
 
                 //update the bitset
-                DynamicBitset dbs = state.getBitset();
-                dbs.set(a1AdjInd, 1);
-                dbs.set(a2AdjInd, 1);
+                DynamicBitset newDBS = state.getBitset();
+                newDBS.set(a1AdjBitsetIndex);
+                newDBS.set(a2AdjBitsetIndex);
 
-                pq.push(RecomputeState(a1EndPosIndex, a2EndPosIndex, state.getDepth()+1, dbs));
-#ifdef DEBUG_4
+                pq.push(RecomputeState(a1NewPosIndex, a2NewPosIndex, state.getDepth()+1, newDBS));
+#ifdef DEBUG_3
                 newStatesAdded += 1;
             }
             else {
-                std::cout << "Dual-Move segments pair FAILED valid check (indexes): " << a1AdjInd << " " << a2AdjInd << std::endl;
+                std::cout << "Dual-Move segments pair FAILED valid check (gcp_indexes): " << a1GCPIndex << " " << a2GCPIndex << std::endl;
 #endif
             }
         }
@@ -263,7 +241,7 @@ void updateSearchStates(
     // a2 move, a1 noop
     // a2 move, a1 move
 
-#ifdef DEBUG_4
+#ifdef DEBUG_3
     std::cout << "Finishing state expansion, added # new states: " << newStatesAdded << std::endl;
 #endif
     return;
@@ -274,14 +252,15 @@ void generateStartingPositions(const GCodeParser& gcp,
 {
     unsigned int totalPositions = lm.getTotalPositions();
     DynamicBitset startBitset(lm.getTotalPrintSegments());
-#ifdef DEBUG_4
+#ifdef DEBUG_3
     std::cout << "Start Bitset is ";
     startBitset.printBitData(std::cout);
     std::cout << std::endl;
 #endif
 
+    //need all the starting pairs b/c what if agents are not interchangable
     for(unsigned int i = 0; i < totalPositions; i++){
-        for(unsigned int j = i+1; j < totalPositions; j++){
+        for(unsigned int j = 0; j < totalPositions; j++){
             if(i == j){
                 continue;
             }
@@ -290,7 +269,7 @@ void generateStartingPositions(const GCodeParser& gcp,
             const Point3& pj = lm.getPoint3FromPos(j);
 
             if(isValidPositionPair(pi,pj)){
-#ifdef DEBUG_4
+#ifdef DEBUG_3
                 std::cout << "Adding new start point pair: " << pi << " " << pj << std::endl;
 #endif
                 pq.push(RecomputeState(i, j, 0, startBitset));

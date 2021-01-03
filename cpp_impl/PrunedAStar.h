@@ -45,11 +45,9 @@ inline bool isValidSegmentsPair(const GCodeSegment& s1, const GCodeSegment& s2){
 }
 
 // do the updating of the search states
-//TODO - rework pending
 void updateSearchStates(
-    const RecomputeState& state, PriorityQueue<RecomputeState>& pq, GCodeParser gcp,
-    PosIndexBiMap& bimapPositionIndex, PosSegMap& positionAdjSegIndexMapping,
-    const std::vector<unsigned int>& printedSegmentsIndexes);
+    const RecomputeState& state, const GCodeParser& gcp,
+    const LayerManager& lm, PriorityQueue<RecomputeState>& pq);
 
 //using the gcp and the lm, push all the items into the PriorityQueue
 void generateStartingPositions(const GCodeParser& gcp, const LayerManager& lm, PriorityQueue<RecomputeState>& pq);

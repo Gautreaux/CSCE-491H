@@ -3,17 +3,18 @@
 #include "pch.h"
 
 #include "GeometryLib/Point3.h"
+#include "LayerManager.h"
 #include "UtilLib/DynamicBitset.h"
 
 class RecomputeState{
 private:
-    unsigned int agent1PositionIndex; // abbreviated index of agent 1 position
-    unsigned int agent2PositionIndex; // abbreviated index of agent 2 position 
+    Position_Index agent1PositionIndex; // abbreviated index of agent 1 position
+    Position_Index agent2PositionIndex; // abbreviated index of agent 2 position 
     unsigned int stepDepth; // number of successor states back to the goal
     DynamicBitset bitset;
 public:
     RecomputeState(void);
-    RecomputeState(unsigned int a1PosInd, unsigned int a2PosInd, unsigned int sd, const DynamicBitset& dbs);
+    RecomputeState(Position_Index a1PosInd, Position_Index a2PosInd, unsigned int sd, const DynamicBitset& dbs);
     RecomputeState(const RecomputeState& other);
     RecomputeState(RecomputeState&& other);
     RecomputeState& operator=(const RecomputeState& other);
@@ -26,8 +27,8 @@ public:
     // return estimated best-case total path length
     unsigned int totalPathLenEst(void) const;
 
-    unsigned int inline getA1PosIndex(void) const {return agent1PositionIndex;}
-    unsigned int inline getA2PosIndex(void) const {return agent2PositionIndex;}
+    Position_Index inline getA1PosIndex(void) const {return agent1PositionIndex;}
+    Position_Index inline getA2PosIndex(void) const {return agent2PositionIndex;}
 
     unsigned int inline getDepth(void) const {return stepDepth;}
 
