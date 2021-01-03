@@ -9,6 +9,7 @@
 
 #include "GCodeParser.h"
 #include "GeometryLib/Point3.h"
+#include "LayerManager.h"
 #include "RecomputeState.h"
 #include "UtilLib/BiMap.h"
 #include "UtilLib/PriorityQueue.h"

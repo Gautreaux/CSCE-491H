@@ -105,8 +105,8 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
     //      each segment is covered a maximal number of times
     for(unsigned int i = 0; i < totalPositions; i++){
         for(unsigned int j = 0; j < totalPositions; j++){
-            Point3& pi = bimapPositionInt.findByB(i)->second;
-            Point3& pj = bimapPositionInt.findByB(j)->second;
+            const Point3& pi = bimapPositionInt.findByB(i)->second;
+            const Point3& pj = bimapPositionInt.findByB(j)->second;
 
             if(isValidPositionPair(pi, pj)){
                 // std::cout << pi << " " << pj << std::endl;
@@ -132,8 +132,8 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
     //print all those pairs as reported by the priority queue
     for(int i = 0; i < pq.size(); i++){
         const RecomputeState& state = pq.at(i);
-        Point3& pi = bimapPositionInt.findByB(state.getA1PosIndex())->second;
-        Point3& pj = bimapPositionInt.findByB(state.getA2PosIndex())->second;
+        const Point3& pi = bimapPositionInt.findByB(state.getA1PosIndex())->second;
+        const Point3& pj = bimapPositionInt.findByB(state.getA2PosIndex())->second;
 
         std::cout << pi << " " << pj << std::endl;
     }
@@ -209,7 +209,8 @@ void prunedAStar(const GCodeParser& gcp){
     for(auto layer = gcp.layers_begin(); layer < gcp.layers_end(); layer++){
         // std::cout << "Layer: " << *layer << std::endl;
         //TODO - actually properly compute the start/end
-        prunedAStarLayer(gcp, gcp.getLayerStartIndex(*layer), gcp.getLayerEndIndex(*layer));
+        LayerManager lm(gcp, *layer);
+        //prunedAStarLayer(gcp, gcp.getLayerStartIndex(*layer), gcp.getLayerEndIndex(*layer));
     }
 }
 

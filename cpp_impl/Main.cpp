@@ -32,4 +32,5 @@ int main(int argc, char ** argv){
     }
 
     prunedAStar(gcp);
+    std::cout << "Normal Exit occurred" << std::endl;
 }

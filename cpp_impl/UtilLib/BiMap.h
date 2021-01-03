@@ -22,11 +22,11 @@ public:
         mapBtoA.insert(std::pair<B, A>(b,a));
     }
 
-    typename map<A,B>::iterator findByA(const A a){
+    typename map<A,B>::const_iterator findByA(const A a) const {
         return mapAtoB.find(a);
     }
 
-    typename map<B,A>::iterator findByB(const B b){
+    typename map<B,A>::const_iterator findByB(const B b) const {
         return mapBtoA.find(b);
     }
 

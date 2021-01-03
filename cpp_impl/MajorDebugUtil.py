@@ -81,6 +81,7 @@ if __name__ == "__main__":
                 break
     if(firstMismatchTrials == None):
         print("All trials matched in output, perhaps you need to increase the number of trials")
+        exit(0)
 
     i,j = firstMismatchTrials
     linesI = str(runResults[i].stdout.decode("ASCII")).split("\r\n")
