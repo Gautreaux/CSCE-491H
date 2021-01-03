@@ -32,39 +32,20 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
     bool foundGoal = false;
     unsigned int mostCompleteState = 0; // maximum number of printed segments in any explored state
 
-    printf("Need to generate all the starting points\n");
-//     //generate all the starting points-pairings for this index
-//     //  TODO - for the moment, we add them all, but in the future we may want to sample a subset
-//     //  some form of vertex cover where we take n positions s.t.
-//     //      each segment is covered a maximal number of times
-//     for(unsigned int i = 0; i < totalPositions; i++){
-//         for(unsigned int j = 0; j < totalPositions; j++){
-//             const Point3& pi = bimapPositionInt.findByB(i)->second;
-//             const Point3& pj = bimapPositionInt.findByB(j)->second;
+    generateStartingPositions(gcp, lm, pq);
 
-//             if(isValidPositionPair(pi, pj)){
-//                 // std::cout << pi << " " << pj << std::endl;
-
-//                 //pq.emplace(i, j, 0, startBitset);
-//                 pq.push(RecomputeState(i, j, 0, startBitset));
-//             }
-//         }
-//     }
-
-// #ifdef DEBUG
-//     printf("Layer resolved %d total starting position pairs\n", pq.size());
-
-// #ifdef DEBUG_4
-//     //print all those pairs as reported by the priority queue
-//     for(int i = 0; i < pq.size(); i++){
-//         const RecomputeState& state = pq.at(i);
-//         const Point3& pi = bimapPositionInt.findByB(state.getA1PosIndex())->second;
-//         const Point3& pj = bimapPositionInt.findByB(state.getA2PosIndex())->second;
-
-//         std::cout << pi << " " << pj << std::endl;
-//     }
-// #endif
-// #endif
+#ifdef DEBUG
+    printf("Layer resolved %d total starting position pairs\n", pq.size());
+#ifdef DEBUG_4
+    //print all those pairs as reported by the priority queue
+    for(int i = 0; i < pq.size(); i++){
+        const RecomputeState& state = pq.at(i);
+        const Point3& pi = lm.getPoint3FromPos(state.getA1PosIndex());
+        const Point3& pj = lm.getPoint3FromPos(state.getA2PosIndex());
+        std::cout << pi << " " << pj << std::endl;
+    }
+#endif // DEBUG_4
+#endif // DEBUG
 
     //TODO - should insert another start state(s) where 
     //  one/both agents are starting without a print operation 
@@ -286,4 +267,34 @@ void updateSearchStates(
     std::cout << "Finishing state expansion, added # new states: " << newStatesAdded << std::endl;
 #endif
     return;
+}
+
+void generateStartingPositions(const GCodeParser& gcp, 
+        const LayerManager& lm, PriorityQueue<RecomputeState>& pq)
+{
+    unsigned int totalPositions = lm.getTotalPositions();
+    DynamicBitset startBitset(lm.getTotalPrintSegments());
+#ifdef DEBUG_4
+    std::cout << "Start Bitset is ";
+    startBitset.printBitData(std::cout);
+    std::cout << std::endl;
+#endif
+
+    for(unsigned int i = 0; i < totalPositions; i++){
+        for(unsigned int j = i+1; j < totalPositions; j++){
+            if(i == j){
+                continue;
+            }
+
+            const Point3& pi = lm.getPoint3FromPos(i);
+            const Point3& pj = lm.getPoint3FromPos(j);
+
+            if(isValidPositionPair(pi,pj)){
+#ifdef DEBUG_4
+                std::cout << "Adding new start point pair: " << pi << " " << pj << std::endl;
+#endif
+                pq.push(RecomputeState(i, j, 0, startBitset));
+            }
+        }
+    }
 }

@@ -12,6 +12,7 @@
 #include "LayerManager.h"
 #include "RecomputeState.h"
 #include "UtilLib/BiMap.h"
+#include "UtilLib/DynamicBitset.h"
 #include "UtilLib/PriorityQueue.h"
 
 typedef BiMap<Point3, unsigned int> PosIndexBiMap;
