@@ -16,6 +16,7 @@ force : clean $(EXECUTABLE)
 
 clean :
 	del /S *.o
+	del Main.exe
 
 # pretty much out of date as soon as it is written
 manual_all :

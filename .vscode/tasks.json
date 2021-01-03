@@ -6,7 +6,7 @@
         {
             "label": "generic-make",
             "type": "shell",
-            "command": "buildScript.bat CPPFLAGS=\"-g -DDEBUG\""
+            "command": "make CPPFLAGS=\"-g -DDEBUG\""
         }
     ]
 }

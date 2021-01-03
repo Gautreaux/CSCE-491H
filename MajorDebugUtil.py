@@ -59,9 +59,11 @@ if __name__ == "__main__":
     print("-----------------------------------")
     print("Build competed ok.")
 
+    # the smart thing to do would be to stop the run once any 2 are mismatched
     runResults = []
-    for _ in range(NUM_TIMES_TO_RUN):
+    for i in range(NUM_TIMES_TO_RUN):
         runResults.append(subprocess.run(ITEM_TO_RUN, capture_output=True))
+        print(f"Completed run {i}")
     
     exitCodes  = list(map(lambda x: x.returncode, runResults))
 
