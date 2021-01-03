@@ -19,6 +19,7 @@ private:
     double layer; //what Z layer this manager corresponds to
     unsigned int totalPrintSegments; //number of print segments
     unsigned int totalPositions; //number of positions in this layer
+    //TODO - should these be some unordered_bimap type?
     BiMap<GCP_Index, Bitset_Index> printedSegmentsTranslation;
     BiMap<Point3, Position_Index> pointPositionIndexTranslation;
     std::vector<Adjacent_Bitset_Indexes> adjacentSegments;

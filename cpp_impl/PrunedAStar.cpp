@@ -1,11 +1,12 @@
 #include "PrunedAStar.h"
 
+#ifndef LOOP_PRINT_FREQUENCY
 #ifdef DEBUG_3
 #define LOOP_PRINT_FREQUENCY 1
 #else
 #define LOOP_PRINT_FREQUENCY 50
 #endif
-
+#endif
 
 class StateCompare {
 public:
@@ -17,105 +18,53 @@ public:
 
 
 
-void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, const unsigned int layerEndInd){
-    //TODO
-#ifdef DEBUG
-    printf("Starting new layer z=%0.3f with %d segments\n", gcp.at(layerStartInd).getStartPoint().getZ(),
-        layerEndInd - layerStartInd + 1);
-#endif
-    // indexes of the printed segments in the layer
-    //  provides a implicit mapping of segment id to bitset position
-    std::vector<unsigned int> printedSegmentsIndexes;  
-
-    for(int i = layerStartInd; i <= layerEndInd; i++){
-        auto seg = gcp.at(i);
-        if(seg.isPrintSegment()){
-            printedSegmentsIndexes.push_back(i);
-        }
-    }
-
-#ifdef DEBUG
-    printf("Layer resolved %d print segments\n", printedSegmentsIndexes.size());
-#endif
-
-    // print all the printSegments for this layer
-    // for(auto ind : printedSegmentsIndexes){
-    //     std::cout << ind << " " << gcp.at(ind) << std::endl;
-    // }
-    // std::cout << std::endl;
-
-    //construct a position-int bi-map
-    //  mostly so that we can get a set of all the positions
-    PosIndexBiMap bimapPositionInt;
-    unsigned int totalPositions = 0;
-    for(auto segIndex : printedSegmentsIndexes){
-        auto& sPos = gcp.at(segIndex).getStartPoint();
-        auto& ePos = gcp.at(segIndex).getEndPoint();
-
-        if(bimapPositionInt.countByA(sPos) == 0){
-            bimapPositionInt.insert(sPos, totalPositions++);
-        }
-
-        if(bimapPositionInt.countByA(ePos) == 0){
-            bimapPositionInt.insert(ePos, totalPositions++);
-        }
-    }
-
-#ifdef DEBUG
-    printf("Layer resolved %d total agent positions\n", totalPositions);
+void prunedAStarLayer(const GCodeParser& gcp, double layer){
 
 #ifdef DEBUG_4
-    // print all the positions in this layer
-    for(auto i = bimapPositionInt.findByABegin(); i != bimapPositionInt.findByAEnd(); i++){
-        std::cout << i->first << std::endl;
-    }
-    std::cout << std::endl;
+    printf("Starting prunedAStarLayer\n");
 #endif
-#endif
+    //build the various maps that allow us to index things efficiently
+    LayerManager lm(gcp, layer);
 
-    //maps a positionIndex to concident segments index
-    // i.e. position (1,1,1) <--> position_index 7 (the bimap above)
-    //  printedSegmentsIndexes[0] --> segIndex[30] --> (1,1,1) to (2,2,2)
-    //then printedSegmentsIndexes[7] = vector(..., 0, ...)
-    //  store the index b/c this maps to the bitmap better
-    PosSegMap positionAdjSegIndexMapping(totalPositions); 
-
-    for(auto segIndex : printedSegmentsIndexes){
-        const GCodeSegment& seg = gcp.at(segIndex);
-        auto& sPos = seg.getStartPoint();
-        auto& ePos = seg.getEndPoint();
-
-        unsigned int sPosIndex = bimapPositionInt.findByA(sPos)->second;
-        unsigned int ePosIndex = bimapPositionInt.findByA(ePos)->second;
-
-        positionAdjSegIndexMapping[sPosIndex].push_back(segIndex);
-        positionAdjSegIndexMapping[ePosIndex].push_back(segIndex);
-    }
-
-    //setup the pieces for A*
-    // std::priority_queue<RecomputeState, std::vector<RecomputeState>, StateCompare> pq;
-    // std::priority_queue<RecomputeState> pq;
     PriorityQueue<RecomputeState> pq;
     std::set<RecomputeState> visitedSet;
-    DynamicBitset startBitset(printedSegmentsIndexes.size());
+    unsigned int expandedStates = 0;
+    bool foundGoal = false;
+    unsigned int mostCompleteState = 0; // maximum number of printed segments in any explored state
 
-    //generate all the starting points-pairings for this index
-    //  TODO - for the moment, we add them all, but in the future we may want to sample a subset
-    //  some form of vertex cover where we take n positions s.t.
-    //      each segment is covered a maximal number of times
-    for(unsigned int i = 0; i < totalPositions; i++){
-        for(unsigned int j = 0; j < totalPositions; j++){
-            const Point3& pi = bimapPositionInt.findByB(i)->second;
-            const Point3& pj = bimapPositionInt.findByB(j)->second;
+    printf("Need to generate all the starting points\n");
+//     //generate all the starting points-pairings for this index
+//     //  TODO - for the moment, we add them all, but in the future we may want to sample a subset
+//     //  some form of vertex cover where we take n positions s.t.
+//     //      each segment is covered a maximal number of times
+//     for(unsigned int i = 0; i < totalPositions; i++){
+//         for(unsigned int j = 0; j < totalPositions; j++){
+//             const Point3& pi = bimapPositionInt.findByB(i)->second;
+//             const Point3& pj = bimapPositionInt.findByB(j)->second;
 
-            if(isValidPositionPair(pi, pj)){
-                // std::cout << pi << " " << pj << std::endl;
+//             if(isValidPositionPair(pi, pj)){
+//                 // std::cout << pi << " " << pj << std::endl;
 
-                //pq.emplace(i, j, 0, startBitset);
-                pq.push(RecomputeState(i, j, 0, startBitset));
-            }
-        }
-    }
+//                 //pq.emplace(i, j, 0, startBitset);
+//                 pq.push(RecomputeState(i, j, 0, startBitset));
+//             }
+//         }
+//     }
+
+// #ifdef DEBUG
+//     printf("Layer resolved %d total starting position pairs\n", pq.size());
+
+// #ifdef DEBUG_4
+//     //print all those pairs as reported by the priority queue
+//     for(int i = 0; i < pq.size(); i++){
+//         const RecomputeState& state = pq.at(i);
+//         const Point3& pi = bimapPositionInt.findByB(state.getA1PosIndex())->second;
+//         const Point3& pj = bimapPositionInt.findByB(state.getA2PosIndex())->second;
+
+//         std::cout << pi << " " << pj << std::endl;
+//     }
+// #endif
+// #endif
 
     //TODO - should insert another start state(s) where 
     //  one/both agents are starting without a print operation 
@@ -125,27 +74,8 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
     //  agents are blocking eachother from finishing   
     //  i.e. they are positioned at either endpoint of the final segment to print
     //      requiring one to move-no-print away so that the other can print
-#ifdef DEBUG
-    printf("Layer resolved %d total starting position pairs\n", pq.size());
 
-#ifdef DEBUG_4
-    //print all those pairs as reported by the priority queue
-    for(int i = 0; i < pq.size(); i++){
-        const RecomputeState& state = pq.at(i);
-        const Point3& pi = bimapPositionInt.findByB(state.getA1PosIndex())->second;
-        const Point3& pj = bimapPositionInt.findByB(state.getA2PosIndex())->second;
-
-        std::cout << pi << " " << pj << std::endl;
-    }
-#endif
-#endif
-
-    unsigned int expandedStates = 0;
-    bool foundGoal = false;
-    unsigned int mostCompleteState = 0; // maximum number of printed segments in any explored state
-
-    //TODO - the major loop
-
+    
     while(pq.size() > 0){
         const RecomputeState& state = pq.top();
         expandedStates += 1;
@@ -159,7 +89,7 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
 #ifdef DEBUG
             const DynamicBitset& bs = state.getBitset();
             printf("GOAL BS: size %d, set count %d, unset count %d\n", bs.size(), bs.getSetCount(), bs.getUnsetCount());
-            printf("Start BS: size %d, set count %d, unset count %d\n", startBitset.size(), startBitset.getSetCount(), startBitset.getUnsetCount());
+            //printf("Start BS: size %d, set count %d, unset count %d\n", startBitset.size(), startBitset.getSetCount(), startBitset.getUnsetCount());
             printf("Depth: %d\n", state.getDepth());
 #endif
             std::cout << std::endl; //force a flush
@@ -174,20 +104,23 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
             std::cout << "Expanding state " << state << std::endl;
 #endif
             //new element, time to expand
-            updateSearchStates(state, pq, gcp, 
-                    bimapPositionInt, positionAdjSegIndexMapping, 
-                    printedSegmentsIndexes);
+            printf("State Expansion not yet implemeneted\n");
+            // updateSearchStates(state, pq, gcp, 
+            //         bimapPositionInt, positionAdjSegIndexMapping, 
+            //         printedSegmentsIndexes);
         }
 
+        // remove the item from the state
         pq.pop();
-        //printf("DBG: size %d\n", pq.size());
+
 #ifdef DEBUG
         //reporting
         if(expandedStates % LOOP_PRINT_FREQUENCY == 0){
             printf("Total %d states expanded. ", expandedStates);
-            printf("Pending states %d; Best state %d/%d printed.\n", pq.size(), mostCompleteState, printedSegmentsIndexes.size());
+            printf("Pending states %d; Best state %d/%d printed.\n", pq.size(), mostCompleteState, lm.getTotalPrintSegments());
         }
 #endif
+
     }
 
     if(foundGoal == false){
@@ -201,6 +134,7 @@ void prunedAStarLayer(const GCodeParser& gcp, const unsigned int layerStartInd, 
 #ifdef DEBUG
     printf("Layer successfully found a goal after %d states at depth %d.\n", expandedStates, pq.top().getDepth());
 #endif
+    //TODO - what type of return should this be?
 }
 
 void prunedAStar(const GCodeParser& gcp){
@@ -209,8 +143,8 @@ void prunedAStar(const GCodeParser& gcp){
     for(auto layer = gcp.layers_begin(); layer < gcp.layers_end(); layer++){
         // std::cout << "Layer: " << *layer << std::endl;
         //TODO - actually properly compute the start/end
-        LayerManager lm(gcp, *layer);
-        //prunedAStarLayer(gcp, gcp.getLayerStartIndex(*layer), gcp.getLayerEndIndex(*layer));
+        //  What was that ^ one about?
+        prunedAStarLayer(gcp, *layer);
     }
 }
 

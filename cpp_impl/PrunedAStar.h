@@ -25,7 +25,7 @@ typedef std::vector<std::vector<unsigned int>> PosSegMap;
 //  gcp - the parsed GCODE object
 //  layerStartInd - the index of the first segment that is part of this layer
 //  layerEndInd - the index of the last segment that is part of this layer
-void prunedAStarLayer(const GCodeParser& gcp, unsigned int layerStartInd, unsigned int layerEndInd);
+void prunedAStarLayer(const GCodeParser& gcp, double layer);
 
 
 // do a pruned AStar Search for each layer
@@ -44,7 +44,11 @@ inline bool isValidSegmentsPair(const GCodeSegment& s1, const GCodeSegment& s2){
 }
 
 // do the updating of the search states
+//TODO - rework pending
 void updateSearchStates(
     const RecomputeState& state, PriorityQueue<RecomputeState>& pq, GCodeParser gcp,
     PosIndexBiMap& bimapPositionIndex, PosSegMap& positionAdjSegIndexMapping,
     const std::vector<unsigned int>& printedSegmentsIndexes);
+
+//using the gcp and the lm, push all the items into the PriorityQueue
+void generateStartingPositions(const GCodeParser& gcp, const LayerManager& lm, PriorityQueue<RecomputeState>& pq);
