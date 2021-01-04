@@ -84,7 +84,6 @@ double LineSegment::minSeperationDistance(const LineSegment& other) const {
 
     //or it may be a projection of an endpoint onto the segments
     Point3 projectedPoint(0,0,0);
-    double tempDist;
 
     projectedPoint = other.getProjectionPoint(this->point);
     if(other.isOnSegment(projectedPoint)){

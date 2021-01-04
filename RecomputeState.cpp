@@ -3,7 +3,7 @@
 RecomputeState::RecomputeState(void) : 
         agent1PositionIndex(0),
         agent2PositionIndex(0),
-        stepDepth((1 << sizeof(stepDepth) - 1)),
+        stepDepth(0),
         bitset(),
         parentState(nullptr)
 {}
@@ -40,7 +40,7 @@ RecomputeState::RecomputeState(RecomputeState&& other) :
 {
     other.agent1PositionIndex = 0;
     other.agent2PositionIndex = 0;
-    other.stepDepth = (1 << sizeof(unsigned int) - 1);
+    other.stepDepth = 0;
     other.parentState = nullptr;
 }
 
@@ -51,6 +51,7 @@ RecomputeState& RecomputeState::operator=(const RecomputeState& other){
     stepDepth = other.stepDepth;
     bitset = other.bitset;
     parentState = other.parentState;
+    return *this;
 }
 
 //move assignment
@@ -65,6 +66,8 @@ RecomputeState& RecomputeState::operator=(RecomputeState&& other){
     other.agent2PositionIndex = 0;
     other.stepDepth = 0;
     other.parentState = nullptr;
+
+    return *this;
 }
 
 unsigned int RecomputeState::distToGoalEst(void) const {

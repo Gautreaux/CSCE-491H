@@ -62,6 +62,7 @@ DynamicBitset& DynamicBitset::operator=(const DynamicBitset& other){
     //printf("DBS Alloc: %p @ %p\n", bitset, this);
     bitset = new char[DBS_NUM_BYTES];
     memcpy(bitset, other.bitset, DBS_NUM_BYTES);
+    return *this;
 }
 
 //move assignment
@@ -78,6 +79,7 @@ DynamicBitset& DynamicBitset::operator=(DynamicBitset&& other){
     other.bitset = nullptr;
     other.numBits = 0;
     other.setCount = 0;
+    return *this;
 }
 
 bool DynamicBitset::at(const unsigned int i) const {
@@ -145,9 +147,9 @@ bool DynamicBitset::set(const unsigned int i, const bool value){
 void DynamicBitset::printBitData(std::ostream& os) const {
     char lookup[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
     os << "0x";
-    for(int i = 0; i < DBS_NUM_BYTES; i++){
-        char lsb = ((1 << 4) - 1) & bitset[i];
-        char msb = (((1 << 8) - 1) - ((1 << 4) - 1) & bitset[i]) >> 4;
+    for(unsigned int i = 0; i < DBS_NUM_BYTES; i++){
+        unsigned char lsb = ((1 << 4) - 1) & bitset[i];
+        unsigned char msb = ((((1 << 8) - 1) - ((1 << 4) - 1)) & bitset[i]) >> 4;
         os << lookup[msb];
         os << lookup[lsb];
     }

@@ -41,7 +41,7 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
     generateStartingPositions(gcp, lm, pq);
 
 #ifdef DEBUG
-    printf("Layer resolved %d total starting position pairs\n", pq.size());
+    printf("Layer resolved %llu total starting position pairs\n", pq.size());
 // #ifdef DEBUG_4
 //     //print all those pairs as reported by the priority queue
 //     //No longer possible with transision to std::priority_queue
@@ -112,7 +112,7 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
         //reporting
         if(expandedStates % LOOP_PRINT_FREQUENCY == 0){
             printf("Total %d states expanded. ", expandedStates);
-            printf("Pending states %d; Best state %d/%d printed.\n", pq.size(), mostCompleteState, lm.getTotalPrintSegments());
+            printf("Pending states %llu; Best state %u/%u printed.\n", pq.size(), mostCompleteState, lm.getTotalPrintSegments());
         }
         if(expandedStates > 100000){
             printf("100,000 states expanded without goal, terminating.\n");
@@ -197,7 +197,6 @@ void updateSearchStates(
         const GCodeSegment& a1Segment = gcp.at(a1GCPIndex);
 
         for(Bitset_Index a2AdjBitsetIndex : lm.getAdjacentSegments(a2PosIndex)){
-            bool b = state->getBitset().at(a2AdjBitsetIndex);
             if(state->getBitset().at(a2AdjBitsetIndex)){
 #ifdef DEBUG_3
                 std::cout << "Skipping seg (bitset_index) for A2 as it was already printed: " << a2AdjBitsetIndex << std::endl;

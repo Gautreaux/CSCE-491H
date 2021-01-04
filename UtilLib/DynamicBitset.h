@@ -8,8 +8,8 @@
 class DynamicBitset{
 private:
     unsigned int numBits;
-    char* bitset;
     unsigned int setCount; // number of bits set
+    char* bitset;
 public:
     DynamicBitset(void);
     DynamicBitset(const unsigned int size);

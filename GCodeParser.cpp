@@ -136,7 +136,7 @@ bool GCodeParser::parseFile(const std::string filePath){
                     posE = 0;
                 }
                 else{
-                    for(int i = 1; i < lineTokens.size(); i++){
+                    for(unsigned int i = 1; i < lineTokens.size(); i++){
                         //TODO - i think that you can home axis to positions
                         //  line "G28 X5" is valid
                         auto st = splitToken(lineTokens[i]);
@@ -156,13 +156,18 @@ bool GCodeParser::parseFile(const std::string filePath){
                     }
                 }
             }else if(split.number == 1){
+                if(currentUnits == GCodeUnits::INCHES){
+                    //this should be more descriptive but whatever
+                    throw UnrecognizedCommandException(line, lineTokens[0]);
+                }
+
                 //G1 - standard liner interpolation move
                 double startX = posX;
                 double startY = posY;
                 double startZ = posZ;
                 double startE = posE;
 
-                for(int i = 1; i < lineTokens.size(); i++){
+                for(unsigned int i = 1; i < lineTokens.size(); i++){
                     auto st = splitToken(lineTokens[i]);
                     if(st.letter == 'X'){
                         posX = (currentPositioningType == GCodePositioningType::ABSOLUTE) ? st.number : posX + st.number;
@@ -188,8 +193,12 @@ bool GCodeParser::parseFile(const std::string filePath){
                     //just pass without adding this as a segment
                 }
                 else{
-                    // GCodeSegment thisSeg(startPoint, endPoint, printAmount);
-                    segmentsList.emplace_back(startPoint, endPoint, printAmount);
+                    //prune the segments list to the first print segment
+                    GCodeSegment thisSeg(startPoint, endPoint, printAmount);
+                    if(thisSeg.isPrintSegment() || segmentsList.size() > 0){
+                        segmentsList.push_back(thisSeg);
+                    }
+                    //segmentsList.emplace_back(startPoint, endPoint, printAmount);
                 }
                 
             }else{
@@ -278,7 +287,7 @@ unsigned int GCodeParser::getLayerStartIndex(double zLayerTarget) const {
     //TODO - could be a binary search or something more efficient, because
     //requires segments to be in monotonic increasing order
 
-    for(int i = 0; i < segmentsList.size(); i++){
+    for(unsigned int i = 0; i < segmentsList.size(); i++){
         const GCodeSegment& gcs = segmentsList.at(i);
         if(gcs.isZParallel()){
             auto z = gcs.getStartPoint().getZ();

@@ -20,13 +20,13 @@ public:
 };
 
 inline bool operator==(const Point3& lhs, const Point3& rhs){
-    if(lhs.getX() != rhs.getX()){
+    if(DOUBLE_NEQ(lhs.getX(), rhs.getX())){
         return false;
     }
-    if(lhs.getY() != rhs.getY()){
+    if(DOUBLE_NEQ(lhs.getY(), rhs.getY())){
         return false;
     }
-    if(lhs.getZ() != rhs.getZ()){
+    if(DOUBLE_NEQ(lhs.getZ(), rhs.getZ())){
         return false;
     }
     return true;

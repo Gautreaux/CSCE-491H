@@ -3,7 +3,7 @@ CPPFLAGS=# empty default value for GCC flags, can be overriden on command line
 CPPSTD=-std=c++11# which c++ version to use
 
 CPP_COMP_COM=$(CXX) $(CPPFLAGS) $(CPPSTD)
-CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c -o $@ $<
+CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c -Wall -o $@ $<
 
 EXECUTABLE=Main.exe
 

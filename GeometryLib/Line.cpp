@@ -50,7 +50,7 @@ Point3 Line::getLineIntersectPoint(const Line& other) const {
 
     double cross1Mag = cross_product(other.slope, pointsVector).getMagnitude();
     double cross2Mag = cross_product(other.slope, this->slope).getMagnitude();
-    if(cross1Mag == 0 || cross2Mag == 0){
+    if(DOUBLE_EQUAL(cross1Mag, 0) || DOUBLE_EQUAL(cross2Mag, 0)){
         throw NoIntersectionException();
     }
 
@@ -61,6 +61,14 @@ Point3 Line::getLineIntersectPoint(const Line& other) const {
         return p;
     }else{
         p = this->point - offsetVector;
+#ifdef DEBUG
+        if(other.isOnLine(p) == false){
+            printf("Assertion Failure inbound\n");
+            std::cout << "Point p: " << p << ", Line (other): " << other << std::endl;
+            std::cout << "Line (this): " << *this << ", offsetVector: " << offsetVector << std::endl;
+            std::cout << "Cross1Mag: " << cross1Mag << ", cross2Mag: " << cross2Mag << std::endl;
+        }
+#endif
         assert(other.isOnLine(p));
         return p;
     }
@@ -72,4 +80,9 @@ Point3 Line::getProjectionPoint(const Point3& testPoint) const {
     
     double projectionMagnitude = dot_product(ap, slope)/dot_product(slope, slope);
     return (point) + (projectionMagnitude * slope);
+}
+
+std::ostream& operator<<(std::ostream& os, const Line& line){
+    os << "[" << line.getPoint() << " " << line.getSlope() << "]";
+    return os;
 }

@@ -5,7 +5,18 @@
 #include <iostream>
 #include <stdexcept>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h> // for memset
+
+
+//some util stuff
+#define DOUBLE_COMPARISON_THRESHOLD 0.000001
+#define DOUBLE_EQUAL(a,b) (abs(a-b) <= DOUBLE_COMPARISON_THRESHOLD)
+#define DOUBLE_NEQ(a,b) (!DOUBLE_EQUAL(a,b))
+#define DOUBLE_LT(a,b) ((b-a-DOUBLE_COMPARISON_THRESHOLD) > 0)
+#define DOUBLE_GT(a,b) ((a-b-DOUBLE_COMPARISON_THRESHOLD) > 0)
+#define DOUBLE_LEQ(a,b) (!DOUBLE_GT(a,b))
+#define DOUBLE_GEQ(a,b) (!DOUBLE_LT(a,b))
 
 
 // these file flags control several print statements and checks in all the files

@@ -16,6 +16,9 @@ public:
     Line(const Point3& point, const Slope& slope);
     Line(const Point3& point, const Point3& otherPoint);
 
+    inline const Point3& getPoint(void) const {return point;}
+    inline const Slope& getSlope(void) const {return slope;}
+
     // return true iff segment is parallel to z = 0
     bool inline isZParallel(void) const {return slope.getZ() == 0;}
 
@@ -37,3 +40,5 @@ public:
     // return the projection of testPoint onto this line
     Point3 getProjectionPoint(const Point3& testPoint) const;
 };
+
+std::ostream& operator<<(std::ostream& os, const Line& line);
