@@ -18,10 +18,6 @@ clean :
 	del /S *.o
 	del Main.exe
 
-# pretty much out of date as soon as it is written
-manual_all :
-	g++ -g -DDEBUG -o $(EXECUTABLE) Main.cpp GCodeSegment.cpp GCodeParser.cpp GeometryLib/Line.cpp GeometryLib/LineSegment.cpp GeometryLib/Point3.cpp GeometryLib/Vector3.cpp
-
 $(EXECUTABLE) : Main.o GCodeParser.o PrunedAStar.o
 	$(CPP_COMP_COM) -o $(EXECUTABLE) *.o
 
@@ -51,13 +47,13 @@ pch.o : pch.cpp pch.h
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # a* files
-PrunedAStar.o : PrunedAStar.cpp PrunedAStar.h RecomputeState.o GCodeParser.o BiMap.o PriorityQueue.o LayerManager.o pch.o
+PrunedAStar.o : PrunedAStar.cpp PrunedAStar.h RecomputeState.o GCodeParser.o BiMap.o LayerManager.o pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 RecomputeState.o : RecomputeState.cpp RecomputeState.h DynamicBitset.o Point3.o LayerManager.o pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-LayerManager.o : LayerManager.cpp LayerManager.h GCodeParser.o GCodeSegment.o Point3.o pch.o
+LayerManager.o : LayerManager.cpp LayerManager.h GCodeParser.o GCodeSegment.o Point3.o BiMap.o pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # util files
@@ -65,9 +61,6 @@ DynamicBitset.o : UtilLib/DynamicBitset.cpp UtilLib/DynamicBitset.h pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 BiMap.o : UtilLib/BiMap.cpp UtilLib/BiMap.h pch.o
-	$(CC_COMPLIE_NO_LINK_AUTO)
-
-PriorityQueue.o : UtilLib/PriorityQueue.cpp UtilLib/PriorityQueue.h pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # Uses builtin .cpp -> .o translation instead
