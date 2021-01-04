@@ -47,7 +47,7 @@ pch.o : pch.cpp pch.h
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # a* files
-PrunedAStar.o : PrunedAStar.cpp PrunedAStar.h RecomputeState.o GCodeParser.o BiMap.o LayerManager.o pch.o
+PrunedAStar.o : PrunedAStar.cpp PrunedAStar.h RecomputeState.o GCodeParser.o BiMap.o LayerManager.o NonReallocVector.o pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 RecomputeState.o : RecomputeState.cpp RecomputeState.h DynamicBitset.o Point3.o LayerManager.o pch.o
@@ -61,6 +61,9 @@ DynamicBitset.o : UtilLib/DynamicBitset.cpp UtilLib/DynamicBitset.h pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 BiMap.o : UtilLib/BiMap.cpp UtilLib/BiMap.h pch.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+NonReallocVector.o : UtilLib/NonReallocVector.cpp UtilLib/NonReallocVector.h pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # Uses builtin .cpp -> .o translation instead

@@ -4,13 +4,15 @@ RecomputeState::RecomputeState(void) :
         agent1PositionIndex(0),
         agent2PositionIndex(0),
         stepDepth((1 << sizeof(stepDepth) - 1)),
-        bitset()
+        bitset(),
+        parentState(nullptr)
 {}
 
 RecomputeState::RecomputeState(unsigned int a1PosInd, unsigned int a2PosInd,
-        unsigned int sd, const DynamicBitset& dbs) :
+        unsigned int sd, const DynamicBitset& dbs, const RecomputeState* parent) :
     agent1PositionIndex(a1PosInd), agent2PositionIndex(a2PosInd),
-    stepDepth(sd), bitset(dbs)
+    stepDepth(sd), bitset(dbs), 
+    parentState(parent)
 {
 #ifdef DEBUG_4
     std::cout <<"Constructed new recompute state " << *this << std::endl;
@@ -22,7 +24,8 @@ RecomputeState::RecomputeState(const RecomputeState& other) :
         agent1PositionIndex(other.agent1PositionIndex),
         agent2PositionIndex(other.agent2PositionIndex),
         stepDepth(other.stepDepth),
-        bitset(other.bitset)
+        bitset(other.bitset),
+        parentState(other.parentState)
 {}
 
 
@@ -32,11 +35,13 @@ RecomputeState::RecomputeState(RecomputeState&& other) :
         agent1PositionIndex(other.agent1PositionIndex),
         agent2PositionIndex(other.agent2PositionIndex),
         stepDepth(other.stepDepth),
-        bitset(other.bitset)
+        bitset(other.bitset),
+        parentState(other.parentState)
 {
     other.agent1PositionIndex = 0;
     other.agent2PositionIndex = 0;
     other.stepDepth = (1 << sizeof(unsigned int) - 1);
+    other.parentState = nullptr;
 }
 
 //copy assignment
@@ -45,6 +50,7 @@ RecomputeState& RecomputeState::operator=(const RecomputeState& other){
     agent2PositionIndex = other.agent2PositionIndex;
     stepDepth = other.stepDepth;
     bitset = other.bitset;
+    parentState = other.parentState;
 }
 
 //move assignment
@@ -53,6 +59,12 @@ RecomputeState& RecomputeState::operator=(RecomputeState&& other){
     agent2PositionIndex = other.agent2PositionIndex;
     stepDepth = other.stepDepth;
     bitset = std::move(other.bitset);
+    parentState = other.parentState;
+
+    other.agent1PositionIndex = 0;
+    other.agent2PositionIndex = 0;
+    other.stepDepth = 0;
+    other.parentState = nullptr;
 }
 
 unsigned int RecomputeState::distToGoalEst(void) const {

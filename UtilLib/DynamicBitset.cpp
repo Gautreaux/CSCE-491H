@@ -60,7 +60,7 @@ DynamicBitset& DynamicBitset::operator=(const DynamicBitset& other){
     numBits = other.numBits;
     setCount = other.setCount;
     //printf("DBS Alloc: %p @ %p\n", bitset, this);
-    assert(bitset != nullptr);
+    bitset = new char[DBS_NUM_BYTES];
     memcpy(bitset, other.bitset, DBS_NUM_BYTES);
 }
 
@@ -124,7 +124,7 @@ bool DynamicBitset::set(const unsigned int i, const bool value){
 
     int byte = i / DBS_SOC;
     int remainder = i % DBS_SOC;
-    bool toReturn = (((char*)bitset)[byte] & (1 << remainder) != 0);
+    bool toReturn = (bitset[byte] & (1 << remainder) != 0);
     
     if(value == true){
         ((char*)bitset)[byte] |= (1 << remainder);

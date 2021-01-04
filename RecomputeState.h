@@ -12,9 +12,11 @@ private:
     Position_Index agent2PositionIndex; // abbreviated index of agent 2 position 
     unsigned int stepDepth; // number of successor states back to the goal
     DynamicBitset bitset;
+    const RecomputeState* parentState;
 public:
     RecomputeState(void);
-    RecomputeState(Position_Index a1PosInd, Position_Index a2PosInd, unsigned int sd, const DynamicBitset& dbs);
+    RecomputeState(Position_Index a1PosInd, Position_Index a2PosInd, 
+        unsigned int sd, const DynamicBitset& dbs, const RecomputeState* parent);
     RecomputeState(const RecomputeState& other);
     RecomputeState(RecomputeState&& other);
     RecomputeState& operator=(const RecomputeState& other);
@@ -33,6 +35,8 @@ public:
     unsigned int inline getDepth(void) const {return stepDepth;}
 
     const DynamicBitset& getBitset(void) const {return bitset;}
+
+    inline const RecomputeState* getParent(void) const {return parentState;}
 };
 
 bool operator<(const RecomputeState& lhs, const RecomputeState& rhs);

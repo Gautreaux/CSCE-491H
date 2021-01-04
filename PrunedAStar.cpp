@@ -8,15 +8,19 @@
 #endif
 #endif
 
-class StateCompare {
-public:
-    bool operator()(const RecomputeState& lhs, const RecomputeState& rhs){
-        printf("DONG\n");
-        return &lhs < &rhs;
+// class StateCompare {
+// public:
+//     bool operator()(const RecomputeState& lhs, const RecomputeState& rhs){
+//         printf("DONG\n");
+//         return &lhs < &rhs;
+//     }
+// };
+
+struct StatePointerCompare{
+    bool operator() (const RecomputeState* lhs, const RecomputeState* rhs) const {
+        return (*lhs) < (*rhs);
     }
 };
-
-
 
 void prunedAStarLayer(const GCodeParser& gcp, double layer){
 
@@ -27,9 +31,11 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
     LayerManager lm(gcp, layer);
 
     std::priority_queue<RecomputeState> pq;
-    std::set<RecomputeState> visitedSet;
+    NonReallocVector<RecomputeState> visitedObjects;
+    std::set<RecomputeState*, StatePointerCompare> visitedSet;
+    
     unsigned int expandedStates = 0;
-    bool foundGoal = false;
+    const RecomputeState* foundGoal = nullptr;
     unsigned int mostCompleteState = 0; // maximum number of printed segments in any explored state
 
     generateStartingPositions(gcp, lm, pq);
@@ -75,23 +81,28 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
             printf("Depth: %d\n", state.getDepth());
 #endif
             std::cout << std::endl; //force a flush
-            foundGoal = true;
+            foundGoal = visitedObjects.push(state);
             break;
         }
 
         mostCompleteState = std::max(mostCompleteState, state.getBitset().getSetCount());
 
-        if(visitedSet.insert(state).second){
+        RecomputeState* statePtr = visitedObjects.push(state);
+
+        if(visitedSet.insert(statePtr).second){
 #ifdef DEBUG_1
             std::cout << "Expanding state " << state << std::endl;
 #endif
             //new element, time to expand
-            updateSearchStates(state, gcp, lm, pq);
+            updateSearchStates(statePtr, gcp, lm, pq);
 
             // printf("State Expansion not yet implemeneted\n");
             // updateSearchStates(state, pq, gcp,
             //         bimapPositionInt, positionAdjSegIndexMapping,
             //         printedSegmentsIndexes);
+        }else{
+            // already in the state, so no need to store
+            visitedObjects.popLast();
         }
 
         // remove the item from the state
@@ -111,7 +122,7 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
 
     }
 
-    if(foundGoal == false){
+    if(foundGoal == nullptr){
 #ifdef DEBUG
         printf("Layer explored %d states and did not find a goal\n", expandedStates);
 #endif
@@ -122,6 +133,19 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
 #ifdef DEBUG
     printf("Layer successfully found a goal after %d states at depth %d.\n", expandedStates, pq.top().getDepth());
 #endif
+
+    // now we need to extract the path from the states
+    std::vector<const RecomputeState*> resolvedPath;
+    while(foundGoal != nullptr){
+        resolvedPath.push_back(foundGoal);
+        foundGoal = foundGoal->getParent();
+    }
+
+    std::cout << "Resolved path:" << std::endl;
+    for(auto i = resolvedPath.rbegin(); i != resolvedPath.rend(); i++){
+        std::cout << **i << std::endl;
+    }
+
     //TODO - what type of return should this be?
 }
 
@@ -137,20 +161,20 @@ void prunedAStar(const GCodeParser& gcp){
 }
 
 void updateSearchStates(
-    const RecomputeState& state, const GCodeParser& gcp,
+    const RecomputeState* state, const GCodeParser& gcp,
     const LayerManager& lm, std::priority_queue<RecomputeState>& pq)
 {
 
 #ifdef DEBUG_3
-    std::cout << "Beginning updateSearchStates for " << state << std::endl;
+    std::cout << "Beginning updateSearchStates for " << *state << std::endl;
     std::cout << "Beginning recompute state bitset: \n\t";
-    state.getBitset().printBitData(std::cout);
+    state->getBitset().printBitData(std::cout);
     std::cout << std::endl;
     unsigned int newStatesAdded = 0;
 #endif
 
-    const Position_Index a1PosIndex = state.getA1PosIndex();
-    const Position_Index a2PosIndex = state.getA2PosIndex();
+    const Position_Index a1PosIndex = state->getA1PosIndex();
+    const Position_Index a2PosIndex = state->getA2PosIndex();
 
     const Point3& a1Pos = lm.getPoint3FromPos(a1PosIndex);
     const Point3& a2Pos = lm.getPoint3FromPos(a2PosIndex);
@@ -161,7 +185,7 @@ void updateSearchStates(
 
     //first attempt to find states where both agents can move to a new position
     for(Bitset_Index a1AdjBitsetIndex : lm.getAdjacentSegments(a1PosIndex)){
-        if(state.getBitset().at(a1AdjBitsetIndex) == 1){
+        if(state->getBitset().at(a1AdjBitsetIndex) == 1){
 #ifdef DEBUG_3
             std::cout << "Skipping seg (bitset_index) for A1 as it was already printed: " << a1AdjBitsetIndex << std::endl;
 #endif
@@ -171,7 +195,7 @@ void updateSearchStates(
         const GCodeSegment& a1Segment = gcp.at(a1GCPIndex);
 
         for(Bitset_Index a2AdjBitsetIndex : lm.getAdjacentSegments(a2PosIndex)){
-            if(state.getBitset().at(a2AdjBitsetIndex) == 1){
+            if(state->getBitset().at(a2AdjBitsetIndex) == 1){
 #ifdef DEBUG_3
                 std::cout << "Skipping seg (bitset_index) for A2 as it was already printed: " << a2AdjBitsetIndex << std::endl;
 #endif
@@ -223,13 +247,13 @@ void updateSearchStates(
 #endif
 
                 //update the bitset
-                DynamicBitset newDBS = state.getBitset();
+                DynamicBitset newDBS = state->getBitset();
                 newDBS.set(a1AdjBitsetIndex);
                 newDBS.set(a2AdjBitsetIndex);
 #ifdef DEBUG_1
-                std::cout << "Pushing new state " << RecomputeState(a1NewPosIndex, a2NewPosIndex, state.getDepth()+1, newDBS) << std::endl;
+                std::cout << "Pushing new state " << RecomputeState(a1NewPosIndex, a2NewPosIndex, state->getDepth()+1, newDBS, state) << std::endl;
 #endif
-                pq.push(RecomputeState(a1NewPosIndex, a2NewPosIndex, state.getDepth()+1, newDBS));
+                pq.push(RecomputeState(a1NewPosIndex, a2NewPosIndex, state->getDepth()+1, newDBS, state));
 #ifdef DEBUG_3
                 newStatesAdded += 1;
             }
@@ -281,7 +305,7 @@ void generateStartingPositions(const GCodeParser& gcp,
 #ifdef DEBUG_3
                 std::cout << "Adding new start point pair: " << pi << " " << pj << std::endl;
 #endif
-                pq.push(RecomputeState(i, j, 0, startBitset));
+                pq.push(RecomputeState(i, j, 0, startBitset, nullptr));
             }
         }
     }
