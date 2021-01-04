@@ -32,12 +32,12 @@
             "program": "${file}",
             "console": "integratedTerminal"
         },
-        {
-            "name": "Main",
-            "type": "python",
-            "request": "launch",
-            "program": "main.py",
-            "console": "integratedTerminal"
-        }
+        // {
+        //     "name": "PY-Main",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "main.py",
+        //     "console": "integratedTerminal"
+        // }
     ]
 }

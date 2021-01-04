@@ -18,6 +18,9 @@ public:
     inline const Point3& getStartPoint(void) const {return point;}
     inline const Point3& getEndPoint(void) const {return endPoint;}
     inline const Point3& getOppositeEndpoint(const Point3& p) const {
+    #ifdef DEBUG
+        assert(p == endPoint || p == point);
+    #endif
         return (p == endPoint ? point : endPoint);
     }
 

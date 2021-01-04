@@ -1,7 +1,7 @@
 #include "PrunedAStar.h"
 
 #ifndef LOOP_PRINT_FREQUENCY
-#ifdef DEBUG_3
+#ifdef DEBUG_1
 #define LOOP_PRINT_FREQUENCY 1
 #else
 #define LOOP_PRINT_FREQUENCY 50
@@ -26,7 +26,7 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
     //build the various maps that allow us to index things efficiently
     LayerManager lm(gcp, layer);
 
-    PriorityQueue<RecomputeState> pq;
+    std::priority_queue<RecomputeState> pq;
     std::set<RecomputeState> visitedSet;
     unsigned int expandedStates = 0;
     bool foundGoal = false;
@@ -36,29 +36,30 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
 
 #ifdef DEBUG
     printf("Layer resolved %d total starting position pairs\n", pq.size());
-#ifdef DEBUG_4
-    //print all those pairs as reported by the priority queue
-    for(int i = 0; i < pq.size(); i++){
-        const RecomputeState& state = pq.at(i);
-        const Point3& pi = lm.getPoint3FromPos(state.getA1PosIndex());
-        const Point3& pj = lm.getPoint3FromPos(state.getA2PosIndex());
-        std::cout << pi << " " << pj << std::endl;
-    }
-#endif // DEBUG_4
+// #ifdef DEBUG_4
+//     //print all those pairs as reported by the priority queue
+//     //No longer possible with transision to std::priority_queue
+//     for(int i = 0; i < pq.size(); i++){
+//         const RecomputeState& state = pq.at(i);
+//         const Point3& pi = lm.getPoint3FromPos(state.getA1PosIndex());
+//         const Point3& pj = lm.getPoint3FromPos(state.getA2PosIndex());
+//         std::cout << pi << " " << pj << std::endl;
+//     }
+// #endif // DEBUG_4
 #endif // DEBUG
 
-    //TODO - should insert another start state(s) where 
-    //  one/both agents are starting without a print operation 
+    //TODO - should insert another start state(s) where
+    //  one/both agents are starting without a print operation
     //  for the scenario where the entire object is printed by one agent
 
-    // TODO (unrelated to above) - is there a potential deadlock where the 
-    //  agents are blocking eachother from finishing   
+    // TODO (unrelated to above) - is there a potential deadlock where the
+    //  agents are blocking eachother from finishing
     //  i.e. they are positioned at either endpoint of the final segment to print
     //      requiring one to move-no-print away so that the other can print
 
-    
+
     while(pq.size() > 0){
-        const RecomputeState& state = pq.top();
+        const RecomputeState state = pq.top();
         expandedStates += 1;
 
 #ifdef DEBUG_4
@@ -81,15 +82,15 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
         mostCompleteState = std::max(mostCompleteState, state.getBitset().getSetCount());
 
         if(visitedSet.insert(state).second){
-#ifdef DEBUG_3
+#ifdef DEBUG_1
             std::cout << "Expanding state " << state << std::endl;
 #endif
             //new element, time to expand
             updateSearchStates(state, gcp, lm, pq);
 
             // printf("State Expansion not yet implemeneted\n");
-            // updateSearchStates(state, pq, gcp, 
-            //         bimapPositionInt, positionAdjSegIndexMapping, 
+            // updateSearchStates(state, pq, gcp,
+            //         bimapPositionInt, positionAdjSegIndexMapping,
             //         printedSegmentsIndexes);
         }
 
@@ -101,6 +102,10 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
         if(expandedStates % LOOP_PRINT_FREQUENCY == 0){
             printf("Total %d states expanded. ", expandedStates);
             printf("Pending states %d; Best state %d/%d printed.\n", pq.size(), mostCompleteState, lm.getTotalPrintSegments());
+        }
+        if(expandedStates > 100000){
+            printf("100,000 states expanded without goal, terminating.\n");
+            exit(99);
         }
 #endif
 
@@ -133,7 +138,7 @@ void prunedAStar(const GCodeParser& gcp){
 
 void updateSearchStates(
     const RecomputeState& state, const GCodeParser& gcp,
-    const LayerManager& lm, PriorityQueue<RecomputeState>& pq)
+    const LayerManager& lm, std::priority_queue<RecomputeState>& pq)
 {
 
 #ifdef DEBUG_3
@@ -158,7 +163,7 @@ void updateSearchStates(
     for(Bitset_Index a1AdjBitsetIndex : lm.getAdjacentSegments(a1PosIndex)){
         if(state.getBitset().at(a1AdjBitsetIndex) == 1){
 #ifdef DEBUG_3
-            std::cout << "Skipping seg (bitset_index) for A1 as it was already printed: " << a1AdjBitsetIndex << std::endl; 
+            std::cout << "Skipping seg (bitset_index) for A1 as it was already printed: " << a1AdjBitsetIndex << std::endl;
 #endif
             continue;
         }
@@ -168,9 +173,9 @@ void updateSearchStates(
         for(Bitset_Index a2AdjBitsetIndex : lm.getAdjacentSegments(a2PosIndex)){
             if(state.getBitset().at(a2AdjBitsetIndex) == 1){
 #ifdef DEBUG_3
-                std::cout << "Skipping seg (bitset_index) for A2 as it was already printed: " << a2AdjBitsetIndex << std::endl; 
+                std::cout << "Skipping seg (bitset_index) for A2 as it was already printed: " << a2AdjBitsetIndex << std::endl;
 #endif
-                continue;        
+                continue;
             }
             const GCP_Index a2GCPIndex = lm.getGCPFromBitset(a2AdjBitsetIndex);
             const GCodeSegment& a2Segment = gcp.at(a2GCPIndex);
@@ -194,7 +199,7 @@ void updateSearchStates(
 
                 // this could be made more efficient in some way
                 const Point3& a1NewPos = a1Segment.getOppositeEndpoint(a1Pos);
-                const Point3& a2NewPos = a1Segment.getOppositeEndpoint(a2Pos);
+                const Point3& a2NewPos = a2Segment.getOppositeEndpoint(a2Pos);
 
 #ifdef DEBUG_3
                 std::cout << "Post-move positions are: " << a1NewPos << " " << a2NewPos << std::endl;
@@ -203,7 +208,9 @@ void updateSearchStates(
                 if(a1NewPos == a2NewPos){
                     //This is actually a really big deal b/c it means that isValidSegmentsPair is incorrect
                     std::cout << "ERROR IN validSegments, new pos resolved to same position: " << a1NewPos << std::endl;
-                    std::cout << "    Violating segments: " << a1Segment << " " << a2Segment << std::endl;
+                    std::cout << "    Violating segments: a1: " << a1Segment << ", a2: " << a2Segment << std::endl;
+                    std::cout << "    A1Pos: " << a1Pos << ", a2Pos: " << a2Pos << std::endl;
+                    std::cout << "    a1NewPos: " << a1NewPos << ", a2NewPos: " << a2NewPos << std::endl;
                     continue;
                 }
 #endif
@@ -219,7 +226,9 @@ void updateSearchStates(
                 DynamicBitset newDBS = state.getBitset();
                 newDBS.set(a1AdjBitsetIndex);
                 newDBS.set(a2AdjBitsetIndex);
-
+#ifdef DEBUG_1
+                std::cout << "Pushing new state " << RecomputeState(a1NewPosIndex, a2NewPosIndex, state.getDepth()+1, newDBS) << std::endl;
+#endif
                 pq.push(RecomputeState(a1NewPosIndex, a2NewPosIndex, state.getDepth()+1, newDBS));
 #ifdef DEBUG_3
                 newStatesAdded += 1;
@@ -247,8 +256,8 @@ void updateSearchStates(
     return;
 }
 
-void generateStartingPositions(const GCodeParser& gcp, 
-        const LayerManager& lm, PriorityQueue<RecomputeState>& pq)
+void generateStartingPositions(const GCodeParser& gcp,
+        const LayerManager& lm, std::priority_queue<RecomputeState>& pq)
 {
     unsigned int totalPositions = lm.getTotalPositions();
     DynamicBitset startBitset(lm.getTotalPrintSegments());

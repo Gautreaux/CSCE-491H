@@ -42,7 +42,7 @@ public:
     unsigned int inline memorySize(void) const {return sizeof(DynamicBitset) + DBS_NUM_BYTES;}
 
     //compare the actual buffers
-    short inline compareBits(const DynamicBitset& other) const {memcmp(bitset, other.bitset, DBS_NUM_BYTES);}
+    short inline compareBits(const DynamicBitset& other) const {return memcmp(bitset, other.bitset, DBS_NUM_BYTES);}
 
     //print the bits of this object in hexadecimal format into the stream
     void printBitData(std::ostream& os) const;

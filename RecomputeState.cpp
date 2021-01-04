@@ -101,11 +101,9 @@ bool operator==(const RecomputeState& lhs, const RecomputeState& rhs){
 }
 
 
-#ifdef DEBUG
 std::ostream &operator<<(std::ostream& os, const RecomputeState& rs){
-    os << "A1 " << rs.getA1PosIndex() << ", A2: " << rs.getA2PosIndex() << ", ";
-    os << "Depth " << rs.getDepth() << ", Unset " << rs.getBitset().getUnsetCount();
+    os << "A1: " << rs.getA1PosIndex() << ", A2: " << rs.getA2PosIndex() << ", ";
+    os << "Depth: " << rs.getDepth() << ", Unset: " << rs.getBitset().getUnsetCount();
 
     return os;
 }
-#endif

@@ -6,7 +6,7 @@
         {
             "label": "generic-make",
             "type": "shell",
-            "command": "make CPPFLAGS=\"-g -DDEBUG\""
+            "command": "make CPPFLAGS=\"-g -DDEBUG_1\" force"
         }
     ]
 }

@@ -3,7 +3,7 @@
 #include "pch.h"
 
 #include "algorithm"
-// #include <queue>
+#include <queue>
 #include <set>
 #include <vector>
 
@@ -13,7 +13,7 @@
 #include "RecomputeState.h"
 #include "UtilLib/BiMap.h"
 #include "UtilLib/DynamicBitset.h"
-#include "UtilLib/PriorityQueue.h"
+// #include "UtilLib/PriorityQueue.h"
 
 typedef BiMap<Point3, unsigned int> PosIndexBiMap;
 typedef std::vector<std::vector<unsigned int>> PosSegMap;
@@ -47,7 +47,7 @@ inline bool isValidSegmentsPair(const GCodeSegment& s1, const GCodeSegment& s2){
 // do the updating of the search states
 void updateSearchStates(
     const RecomputeState& state, const GCodeParser& gcp,
-    const LayerManager& lm, PriorityQueue<RecomputeState>& pq);
+    const LayerManager& lm, std::priority_queue<RecomputeState>& pq);
 
 //using the gcp and the lm, push all the items into the PriorityQueue
-void generateStartingPositions(const GCodeParser& gcp, const LayerManager& lm, PriorityQueue<RecomputeState>& pq);
+void generateStartingPositions(const GCodeParser& gcp, const LayerManager& lm, std::priority_queue<RecomputeState>& pq);
