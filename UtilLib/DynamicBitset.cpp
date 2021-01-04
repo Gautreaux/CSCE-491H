@@ -108,10 +108,10 @@ bool DynamicBitset::at(const unsigned int i) const {
     printBitData(std::cout);
     std::cout << std::endl;
 
-    std::cout << "Final Result: " << (bitset[byte] & (1 << remainder) != 0) << std::endl;
+    std::cout << "Final Result: " << ((bitset[byte] & (1 << remainder)) != 0) << std::endl;
 #endif
 
-    return (bitset[byte] & (1 << remainder) != 0);
+    return (bitset[byte] & (1 << remainder)) != 0;
 }
 
 bool DynamicBitset::set(const unsigned int i, const bool value){
@@ -124,7 +124,7 @@ bool DynamicBitset::set(const unsigned int i, const bool value){
 
     int byte = i / DBS_SOC;
     int remainder = i % DBS_SOC;
-    bool toReturn = (bitset[byte] & (1 << remainder) != 0);
+    bool toReturn = (bitset[byte] & (1 << remainder)) != 0;
     
     if(value == true){
         ((char*)bitset)[byte] |= (1 << remainder);
@@ -144,13 +144,12 @@ bool DynamicBitset::set(const unsigned int i, const bool value){
 
 void DynamicBitset::printBitData(std::ostream& os) const {
     char lookup[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+    os << "0x";
     for(int i = 0; i < DBS_NUM_BYTES; i++){
-        // char lsb = ((1 << 4) - 1) & bitset[i];
-        // char msb = (((1 << 8) - 1) - ((1 << 4) - 1) & bitset[i]) >> 4;
-        // std:: cout << "(" << int(msb) << "," << int(lsb) << ")";
-        // os << lookup[msb];
-        // os << lookup[lsb];
-        std::cout << (int)bitset[i] << " ";
+        char lsb = ((1 << 4) - 1) & bitset[i];
+        char msb = (((1 << 8) - 1) - ((1 << 4) - 1) & bitset[i]) >> 4;
+        os << lookup[msb];
+        os << lookup[lsb];
     }
 }
 

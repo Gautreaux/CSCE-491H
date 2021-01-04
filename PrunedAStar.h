@@ -52,3 +52,6 @@ void updateSearchStates(
 
 //using the gcp and the lm, push all the items into the PriorityQueue
 void generateStartingPositions(const GCodeParser& gcp, const LayerManager& lm, std::priority_queue<RecomputeState>& pq);
+
+//print a more verbose representation of the state
+void printVerbose(std::ostream& os, const RecomputeState& state, const GCodeParser& gcp, const LayerManager& lm);

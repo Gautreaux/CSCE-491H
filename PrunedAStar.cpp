@@ -143,7 +143,8 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
 
     std::cout << "Resolved path:" << std::endl;
     for(auto i = resolvedPath.rbegin(); i != resolvedPath.rend(); i++){
-        std::cout << **i << std::endl;
+        printVerbose(std::cout, **i, gcp, lm);
+        // std::cout << **i << std::endl;
     }
 
     //TODO - what type of return should this be?
@@ -157,6 +158,7 @@ void prunedAStar(const GCodeParser& gcp){
         //TODO - actually properly compute the start/end
         //  What was that ^ one about?
         prunedAStarLayer(gcp, *layer);
+        break;
     }
 }
 
@@ -185,7 +187,7 @@ void updateSearchStates(
 
     //first attempt to find states where both agents can move to a new position
     for(Bitset_Index a1AdjBitsetIndex : lm.getAdjacentSegments(a1PosIndex)){
-        if(state->getBitset().at(a1AdjBitsetIndex) == 1){
+        if(state->getBitset().at(a1AdjBitsetIndex)){
 #ifdef DEBUG_3
             std::cout << "Skipping seg (bitset_index) for A1 as it was already printed: " << a1AdjBitsetIndex << std::endl;
 #endif
@@ -195,7 +197,8 @@ void updateSearchStates(
         const GCodeSegment& a1Segment = gcp.at(a1GCPIndex);
 
         for(Bitset_Index a2AdjBitsetIndex : lm.getAdjacentSegments(a2PosIndex)){
-            if(state->getBitset().at(a2AdjBitsetIndex) == 1){
+            bool b = state->getBitset().at(a2AdjBitsetIndex);
+            if(state->getBitset().at(a2AdjBitsetIndex)){
 #ifdef DEBUG_3
                 std::cout << "Skipping seg (bitset_index) for A2 as it was already printed: " << a2AdjBitsetIndex << std::endl;
 #endif
@@ -309,4 +312,13 @@ void generateStartingPositions(const GCodeParser& gcp,
             }
         }
     }
+}
+
+void printVerbose(std::ostream& os, const RecomputeState& state, const GCodeParser& gcp, const LayerManager& lm){
+    os << "A1: " << lm.getPoint3FromPos(state.getA1PosIndex()) << "(" << state.getA1PosIndex() << "), ";
+    os << "A2: " << lm.getPoint3FromPos(state.getA2PosIndex()) << "(" << state.getA2PosIndex() << "), ";
+    os << "Depth: " << state.getDepth() << ", ";
+    os << "BitData: ";
+    state.getBitset().printBitData(os);
+    os << std::endl;
 }
