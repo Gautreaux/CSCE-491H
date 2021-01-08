@@ -40,16 +40,6 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
 
 #ifdef DEBUG
     printf("Layer resolved %llu total starting position pairs\n", pq.size());
-// #ifdef DEBUG_4
-//     //print all those pairs as reported by the priority queue
-//     //No longer possible with transision to std::priority_queue
-//     for(int i = 0; i < pq.size(); i++){
-//         const RecomputeState& state = pq.at(i);
-//         const Point3& pi = lm.getPoint3FromPos(state.getA1PosIndex());
-//         const Point3& pj = lm.getPoint3FromPos(state.getA2PosIndex());
-//         std::cout << pi << " " << pj << std::endl;
-//     }
-// #endif // DEBUG_4
 #endif // DEBUG
 
 // #ifdef DEBUG
@@ -72,8 +62,14 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
     //      requiring one to move-no-print away so that the other can print
 
 
-    while(pq.size() > 0){
+    while(!pq.empty()){
         RecomputeState state = pq.top();
+
+        // remove the item from the queue
+        //std::cout << "PriorityQueue size (pre-pop) : " << pq.size() << std::endl;
+        pq.pop();
+        //std::cout << "PriorityQueue size (post-pop): " << pq.size() << std::endl;
+
         expandedStates += 1;
 
 #ifdef DEBUG_1
@@ -91,14 +87,10 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
 #endif
             std::cout << std::endl; //force a flush
             foundGoal = visitedObjects.push(state);
-#ifdef DEBUG_1
-            //just for matching pops and pushes
-            pq.pop();
-#endif
             break;
         }
 
-        if(state.getDepth() + MAX_STEPBACK_ALLOWED < mostCompleteState){
+        if((state.getDepth() + MAX_STEPBACK_ALLOWED) < mostCompleteState){
             //skip this state b/c it goes too far back
             // as a bonus, since most mostCompleteState is always increasing
             //  we do not need to add this to the visitedSet, saving memory
@@ -127,8 +119,6 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
             }
         }
 
-        // remove the item from the state
-        pq.pop();
 
 #ifdef DEBUG
         //reporting
@@ -154,10 +144,13 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
 
 #ifdef DEBUG_1
     printf("At exit time, there were %llu elements left in the queue\n", pq.size());
-    while(pq.size() > 0){
+    while(!pq.empty()){
         const RecomputeState state = pq.top();
         std::cout << "Current state: " << state << std::endl;
+
+        //std::cout << "PriorityQueue size (pre-pop) : " << pq.size() << std::endl;
         pq.pop();
+        //std::cout << "PriorityQueue size (post-pop): " << pq.size() << std::endl;
     }
     std::cout << std::endl;
 #endif
@@ -287,13 +280,10 @@ void updateSearchStates(
                 RecomputeState newState(a1NewPosIndex, a2NewPosIndex, state->getDepth()+1, newDBS, state);
 #ifdef DEBUG_1
                 std::cout << "Pushing new state " << newState << std::endl;
-
-                //NO-COMMIT
-                if(a1NewPosIndex == 0 && a2NewPosIndex == 2 && (state->getDepth() + 1) == 2 && newDBS.getUnsetCount() == 4){
-                    printf("Here comes the magic state\n");
-                }
 #endif
-                pq.push(RecomputeState(newState));
+                //std::cout << "PriorityQueue size (pre-push) : " << pq.size() << std::endl;
+                pq.push(newState);
+                //std::cout << "PriorityQueue size (post-push): " << pq.size() << std::endl;
 #ifdef DEBUG_3
                 newStatesAdded += 1;
             }
@@ -349,7 +339,9 @@ void generateStartingPositions(const GCodeParser& gcp,
 #ifdef DEBUG_1
                 std::cout << "Pushing new state " << newState << std::endl;
 #endif
+                //std::cout << "PriorityQueue size (pre-push) : " << pq.size() << std::endl;
                 pq.push(newState);
+                //std::cout << "PriorityQueue size (post-push): " << pq.size() << std::endl;
             }
         }
     }
