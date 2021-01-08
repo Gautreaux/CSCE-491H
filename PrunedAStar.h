@@ -16,24 +16,60 @@
 #include "UtilLib/NonReallocVector.h"
 // #include "UtilLib/PriorityQueue.h"
 
+#ifndef LOOP_PRINT_FREQUENCY
+#ifdef DEBUG_1
+#define LOOP_PRINT_FREQUENCY 1
+#else
+#define LOOP_PRINT_FREQUENCY 1000000
+#endif
+#endif
+
+// maximum number of print segments allowed in a step back 
+#define MAX_STEPBACK_ALLOWED 1000000
+
+
 typedef BiMap<Point3, unsigned int> PosIndexBiMap;
 typedef std::vector<std::vector<unsigned int>> PosSegMap;
 
 //compare types for a quick change of whats going on
+//compare using the default < operator
 typedef std::less<RecomputeState> DefaultCompare;
+
+//compare based on greatest depth (or is this least depth)
+//  greatest depth expanded first
 struct DepthCompare {
 public:
     bool operator()(const RecomputeState& lhs, const RecomputeState& rhs){
-        return lhs.getBitset().getUnsetCount() > rhs.getBitset().getUnsetCount();
-        // if(lhs.getDepth() < rhs.getDepth()){
-        //     return true;
-        // }else if(lhs.getDepth() > rhs.getDepth()){
-        //     return false;
-        // }
-        // return lhs < rhs;
+        if(lhs.getDepth() < rhs.getDepth()){
+            return true;
+        }else if(lhs.getDepth() > rhs.getDepth()){
+            return false;
+        }
+        return lhs < rhs;
     }
 };
-typedef std::priority_queue<RecomputeState, std::vector<RecomputeState>, DepthCompare> State_PQ;
+
+//compare on number of unset bits
+//  least unset bits (most set bits) expanded first
+struct SetBitCompare {
+public:
+    bool operator()(const RecomputeState& lhs, const RecomputeState& rhs){
+        return lhs.getBitset().getUnsetCount() > rhs.getBitset().getUnsetCount();
+    }
+};
+
+// compare based on a more intelligent compare
+//  balances depth vs total states expanded
+struct PriorityCompare {
+public:
+    bool operator()(const RecomputeState& lhs, const RecomputeState& rhs){
+        //                      discount version of math::ceil(lhs.getUnsetCount() / 2.0);
+        auto lhsCost = lhs.getDepth() + ((lhs.getBitset().getUnsetCount()-1) / 2) + 1;
+        auto rhsCost = rhs.getDepth() + ((rhs.getBitset().getUnsetCount()-1) / 2) + 1;
+        return lhsCost < rhsCost;
+    }
+};
+typedef std::priority_queue<RecomputeState, std::vector<RecomputeState>, PriorityCompare> State_PQ;
 
 
 struct StatePointerCompare{

@@ -1,25 +1,5 @@
 #include "PrunedAStar.h"
 
-#ifndef LOOP_PRINT_FREQUENCY
-#ifdef DEBUG_1
-#define LOOP_PRINT_FREQUENCY 1
-#else
-#define LOOP_PRINT_FREQUENCY 5000
-#endif
-#endif
-
-// maximum number of print segments allowed in a step back 
-#define MAX_STEPBACK_ALLOWED 200
-
-// class StateCompare {
-// public:
-//     bool operator()(const RecomputeState& lhs, const RecomputeState& rhs){
-//         printf("DONG\n");
-//         return &lhs < &rhs;
-//     }
-// };
-
-
 void prunedAStarLayer(const GCodeParser& gcp, double layer){
 
 #ifdef DEBUG_3
@@ -98,7 +78,14 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
             std::cout << "Skipping state (stepback): " << state << std::endl;
 #endif
         }else{
-            mostCompleteState = std::max(mostCompleteState, state.getBitset().getSetCount());
+            if(state.getBitset().getSetCount() > mostCompleteState){
+                mostCompleteState = state.getBitset().getSetCount();
+#ifdef DEBUG
+                printf("New best state: %u/%u, expanded: %d, pending: %llu\n",
+                    state.getBitset().getSetCount(), lm.getTotalPrintSegments(),
+                    expandedStates, pq.size());
+#endif
+            }
 
             RecomputeState* statePtr = visitedObjects.push(state);
 
@@ -126,8 +113,8 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
             printf("Total %d states expanded. ", expandedStates);
             printf("Pending states %llu; Best state %u/%u printed.\n", pq.size(), mostCompleteState, lm.getTotalPrintSegments());
         }
-        if(expandedStates > 1000000000){
-            printf("1,000,000,000 states expanded without goal, terminating.\n");
+        if(expandedStates > 100000000){
+            printf("100,000,000 states expanded without goal, terminating.\n");
             exit(99);
         }
 #endif

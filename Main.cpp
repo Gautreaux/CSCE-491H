@@ -25,10 +25,20 @@ int main(int argc, char ** argv){
 
     //FYI - letting this run with only dual prints.
     //  can get to 344/652 printed on the first layer
-    //FYI - letting this run with dual prints and print/noop, infinite stepback
+    //FYI - letting this run with dual prints and print/noop, 
+    //  infinite stepback, setbit priority
     //  389/652 @ 50 million states (~3GB ram)
     //  392/652 @ 85 million states (~5GB ram)
     //  cancelled @ 100 million states (~6GB ram)
+    //FYI - letting this run with dual prints and print/noop,
+    //  infinite stepback, depthcompare
+    //  393/652 @ ~3 million states (~?GB ram)
+    //          @ ~50 million states (~3GB ram)
+    //          @ ~100 million states (~6GB ram)
+    //FYI - letting thus run with dual prints and print/noop,
+    //  infinite stepback, prioritycompare
+    //  372/652 @ ~1 million states (~?GB ram)
+    
     //GCodeParser gcp("gcodeSampleSet/81191.gcode");
 
     if(gcp){
