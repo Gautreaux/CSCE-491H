@@ -46,6 +46,10 @@ RecomputeState::RecomputeState(RecomputeState&& other) :
 
 //copy assignment
 RecomputeState& RecomputeState::operator=(const RecomputeState& other){
+    if(this == &other){
+        return *this;
+    }
+
     agent1PositionIndex = other.agent1PositionIndex;
     agent2PositionIndex = other.agent2PositionIndex;
     stepDepth = other.stepDepth;
@@ -56,6 +60,10 @@ RecomputeState& RecomputeState::operator=(const RecomputeState& other){
 
 //move assignment
 RecomputeState& RecomputeState::operator=(RecomputeState&& other){
+    if(this == &other){
+        return *this;
+    }
+
     agent1PositionIndex = other.agent1PositionIndex;
     agent2PositionIndex = other.agent2PositionIndex;
     stepDepth = other.stepDepth;
@@ -95,20 +103,37 @@ bool operator<(const RecomputeState& lhs, const RecomputeState& rhs){
     }
     //A1 and A2 Match
 
-    //dont care about stepDepth
+    // depth matching shouldnt? matter
+    if(lhs.getDepth() < rhs.getDepth()){
+        return true;
+    }
+    if(lhs.getDepth() > rhs.getDepth()){
+        return false;
+    }
+    // //a1, a2, and depth all match
 
     return lhs.getBitset() < rhs.getBitset();
 }
 
 bool operator==(const RecomputeState& lhs, const RecomputeState& rhs){
-    //allow for the position indicies to be transposed (for now)
-    if(!(lhs.getA1PosIndex() == rhs.getA1PosIndex() || lhs.getA1PosIndex() == rhs.getA2PosIndex())){
+    if(lhs.getA1PosIndex() != rhs.getA1PosIndex()){
+        return false;
+    }
+    if(lhs.getA2PosIndex() != rhs.getA2PosIndex()){
+        return false;
+    }
+    if(lhs.getDepth() != rhs.getDepth()){
         return false;
     }
 
-    if(!(lhs.getA2PosIndex() == rhs.getA1PosIndex() || lhs.getA2PosIndex() == rhs.getA2PosIndex())){
-        return false;
-    }
+    // //allow for the position indicies to be transposed (for now)
+    // if(!(lhs.getA1PosIndex() == rhs.getA1PosIndex() || lhs.getA1PosIndex() == rhs.getA2PosIndex())){
+    //     return false;
+    // }
+
+    // if(!(lhs.getA2PosIndex() == rhs.getA1PosIndex() || lhs.getA2PosIndex() == rhs.getA2PosIndex())){
+    //     return false;
+    // }
 
     //dont really care about the stepDepth ATM
 
@@ -119,6 +144,9 @@ bool operator==(const RecomputeState& lhs, const RecomputeState& rhs){
 std::ostream &operator<<(std::ostream& os, const RecomputeState& rs){
     os << "A1: " << rs.getA1PosIndex() << ", A2: " << rs.getA2PosIndex() << ", ";
     os << "Depth: " << rs.getDepth() << ", Unset: " << rs.getBitset().getUnsetCount();
-
+#ifdef DEBUG_1
+    os << ", BitData: ";
+    rs.getBitset().printBitData(os);
+#endif
     return os;
 }
