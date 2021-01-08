@@ -107,3 +107,18 @@ double LineSegment::minSeperationDistance(const LineSegment& other) const {
 
     return minDist;
 }
+
+double LineSegment::minSeperationDistance(const Point3& other) const {
+    if(isOnSegment(other)){
+        return 0;
+    }
+
+    double minDist = std::min(getPointDistance(this->point, other), getPointDistance(this->endPoint, other));
+
+    Point3 projection = getProjectionPoint(other);
+    if(isOnSegment(projection)){
+        minDist = std::min(minDist, getPointDistance(projection, other));
+    }
+    
+    return minDist;
+}

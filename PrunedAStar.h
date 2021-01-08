@@ -70,6 +70,16 @@ inline bool isValidSegmentsPair(const GCodeSegment& s1, const GCodeSegment& s2){
     return s1.minSeperationDistance(s2) >= COLLISION_TOLERANCE;
 }
 
+//return true if the segment can be traversed while
+//  the other agent does a NO-op
+//  two functions provided as the function may not be reflexive
+inline bool isValidSegNOOP(const GCodeSegment& a1Segment, const Point3& a2Pos){
+    return a1Segment.minSeperationDistance(a2Pos) >= COLLISION_TOLERANCE;
+}
+inline bool isValidSegNOOP(const Point3& a1Pos, const GCodeSegment& a2Segment){
+    return a2Segment.minSeperationDistance(a1Pos) >= COLLISION_TOLERANCE;
+}
+
 // do the updating of the search states
 void updateSearchStates(
     const RecomputeState* state, const GCodeParser& gcp,

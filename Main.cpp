@@ -23,8 +23,12 @@ int main(int argc, char ** argv){
 
     GCodeParser gcp(filePath);
 
-    //FYI - letting this run  with only dual moves.
+    //FYI - letting this run with only dual prints.
     //  can get to 344/652 printed on the first layer
+    //FYI - letting this run with dual prints and print/noop, infinite stepback
+    //  389/652 @ 50 million states (~3GB ram)
+    //  392/652 @ 85 million states (~5GB ram)
+    //  cancelled @ 100 million states (~6GB ram)
     //GCodeParser gcp("gcodeSampleSet/81191.gcode");
 
     if(gcp){

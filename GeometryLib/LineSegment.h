@@ -31,6 +31,9 @@ public:
         
     //get the distance on the segments (endpoints inclusive)
     double minSeperationDistance(const LineSegment& other) const;
+
+    //get the distance point to segment (endpoints inclusive)
+    double minSeperationDistance(const Point3& other) const;
 };
 
 std::ostream &operator<<(std::ostream& os, const LineSegment& seg);

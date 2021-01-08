@@ -8,6 +8,9 @@ CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -o $@ $< *.o
 
 EXECUTABLE=Main.exe
 
+$(EXECUTABLE) : Main.cpp GCodeParser.o PrunedAStar.o
+	$(CC_COMPILE_LINK_EXE_AUTO)
+
 # declaring a phony forces the top level to always rebuild
 .PHONY: $(EXECUTABLE) tests
 
@@ -19,8 +22,6 @@ clean :
 	del /S *.o
 	del /S *.exe
 
-$(EXECUTABLE) : Main.cpp GCodeParser.o PrunedAStar.o
-	$(CC_COMPILE_LINK_EXE_AUTO)
 
 # geometry files 
 GCodeParser.o : GCodeParser.cpp GCodeParser.h GCodeSegment.o Point3.o pch.o

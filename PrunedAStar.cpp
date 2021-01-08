@@ -4,12 +4,12 @@
 #ifdef DEBUG_1
 #define LOOP_PRINT_FREQUENCY 1
 #else
-#define LOOP_PRINT_FREQUENCY 500
+#define LOOP_PRINT_FREQUENCY 5000
 #endif
 #endif
 
 // maximum number of print segments allowed in a step back 
-#define MAX_STEPBACK_ALLOWED 100000
+#define MAX_STEPBACK_ALLOWED 200
 
 // class StateCompare {
 // public:
@@ -210,7 +210,7 @@ void updateSearchStates(
     std::cout << "Resolved positions: " << a1Pos << " " << a2Pos << std::endl;
 #endif
 
-    //first attempt to find states where both agents can move to a new position
+    //first attempt to find states where both agents can print-move to a new position
     for(Bitset_Index a1AdjBitsetIndex : lm.getAdjacentSegments(a1PosIndex)){
         if(state->getBitset().at(a1AdjBitsetIndex)){
 #ifdef DEBUG_3
@@ -294,10 +294,61 @@ void updateSearchStates(
         }
     }
 
+    //create the states where a1 prints and a2 NOOP
+    //this loop could be moved into the loop above
+    //  might save some efficiency in these searches that follow
+    for(Bitset_Index a1AdjBitsetIndex : lm.getAdjacentSegments(a1PosIndex)){
+        if(state->getBitset().at(a1AdjBitsetIndex)){
+            //this segment was already printed, so skip
+            continue;
+        }
+        const GCP_Index a1GCPIndex = lm.getGCPFromBitset(a1AdjBitsetIndex);
+        const GCodeSegment& a1Segment = gcp.at(a1GCPIndex);
+
+        if(isValidSegNOOP(a1Segment, a2Pos)){
+            //create and push the new state
+            const Point3& a1NewPos = a1Segment.getOppositeEndpoint(a1Pos);
+            const Position_Index a1NewPosIndex = lm.getPosFromPoint3(a1NewPos);
+
+            DynamicBitset newDBS = state->getBitset();
+            newDBS.set(a1AdjBitsetIndex);
+            RecomputeState newState(a1NewPosIndex, a2PosIndex, state->getDepth()+1, newDBS, state);
+#ifdef DEBUG_1
+            std::cout << "Pushing new state " << newState << std::endl;
+#endif
+            pq.push(newState);
+        }
+    }
+
+    //create the states where a2Prints and a1 NOOP
+    //this loop is harder to move into the dual-move loop
+    //  but using a bool flag or something it should be possible and 
+    //  may make sense from an efficiency standpoint
+    for(Bitset_Index a2AdjBitsetIndex : lm.getAdjacentSegments(a2PosIndex)){
+        if(state->getBitset().at(a2AdjBitsetIndex)){
+            //this segment was already printed, so skip
+            continue;
+        }
+        const GCP_Index a2GCPIndex = lm.getGCPFromBitset(a2AdjBitsetIndex);
+        const GCodeSegment& a2Segment = gcp.at(a2GCPIndex);
+
+        if(isValidSegNOOP(a1Pos, a2Segment)){
+            //create and push the new state
+            const Point3& a2NewPos = a2Segment.getOppositeEndpoint(a2Pos);
+            const Position_Index a2NewPosIndex = lm.getPosFromPoint3(a2NewPos);
+
+            DynamicBitset newDBS = state->getBitset();
+            newDBS.set(a2AdjBitsetIndex);
+            RecomputeState newState(a1PosIndex, a2NewPosIndex, state->getDepth()+1, newDBS, state);
+#ifdef DEBUG_1
+            std::cout << "Pushing new state " << newState << std::endl;
+#endif
+            pq.push(newState);
+        }
+    }
+
     //TODO - more transitions (in no real order)
-    // a1 print, a2 noop
     // a1 print, a2 move
-    // a2 print, a1 noop
     // a2 print, a1 move
     // a1 move, a2 noop
     // a1 move, a2 move
