@@ -4,9 +4,12 @@
 #ifdef DEBUG_1
 #define LOOP_PRINT_FREQUENCY 1
 #else
-#define LOOP_PRINT_FREQUENCY 50
+#define LOOP_PRINT_FREQUENCY 500
 #endif
 #endif
+
+// maximum number of print segments allowed in a step back 
+#define MAX_STEPBACK_ALLOWED 100000
 
 // class StateCompare {
 // public:
@@ -16,11 +19,6 @@
 //     }
 // };
 
-struct StatePointerCompare{
-    bool operator() (const RecomputeState* lhs, const RecomputeState* rhs) const {
-        return (*lhs) < (*rhs);
-    }
-};
 
 void prunedAStarLayer(const GCodeParser& gcp, double layer){
 
@@ -30,11 +28,11 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
     //build the various maps that allow us to index things efficiently
     LayerManager lm(gcp, layer);
 
-    std::priority_queue<RecomputeState> pq;
+    State_PQ pq;
     NonReallocVector<RecomputeState> visitedObjects;
-    std::set<RecomputeState*, StatePointerCompare> visitedSet;
+    State_Set visitedSet;
     
-    unsigned int expandedStates = 0;
+    unsigned int expandedStates = 0; //TODO - really more of an explored states than expanded states
     const RecomputeState* foundGoal = nullptr;
     unsigned int mostCompleteState = 0; // maximum number of printed segments in any explored state
 
@@ -54,6 +52,16 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
 // #endif // DEBUG_4
 #endif // DEBUG
 
+// #ifdef DEBUG
+//     while(pq.size() > 0){
+//         const RecomputeState state = pq.top();
+//         std::cout << "Current state: " << state << std::endl;
+//         pq.pop();
+//     }
+//     std::cout << std::endl;
+//     return;
+// #endif
+
     //TODO - should insert another start state(s) where
     //  one/both agents are starting without a print operation
     //  for the scenario where the entire object is printed by one agent
@@ -65,11 +73,11 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
 
 
     while(pq.size() > 0){
-        const RecomputeState state = pq.top();
+        RecomputeState state = pq.top();
         expandedStates += 1;
 
-#ifdef DEBUG_4
-        std::cout << "In Pruned A* Layer, got state " << state << std::endl;
+#ifdef DEBUG_1
+        std::cout << "Current state: " << state << std::endl;
 #endif
 
         //check if goal
@@ -79,30 +87,44 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
             printf("GOAL BS: size %d, set count %d, unset count %d\n", bs.size(), bs.getSetCount(), bs.getUnsetCount());
             //printf("Start BS: size %d, set count %d, unset count %d\n", startBitset.size(), startBitset.getSetCount(), startBitset.getUnsetCount());
             printf("Depth: %d\n", state.getDepth());
+            std::cout << "Goal State: " << state << std::endl;
 #endif
             std::cout << std::endl; //force a flush
             foundGoal = visitedObjects.push(state);
+#ifdef DEBUG_1
+            //just for matching pops and pushes
+            pq.pop();
+#endif
             break;
         }
 
-        mostCompleteState = std::max(mostCompleteState, state.getBitset().getSetCount());
-
-        RecomputeState* statePtr = visitedObjects.push(state);
-
-        if(visitedSet.insert(statePtr).second){
-#ifdef DEBUG_1
-            std::cout << "Expanding state " << state << std::endl;
+        if(state.getDepth() + MAX_STEPBACK_ALLOWED < mostCompleteState){
+            //skip this state b/c it goes too far back
+            // as a bonus, since most mostCompleteState is always increasing
+            //  we do not need to add this to the visitedSet, saving memory
+#ifdef DEBUG_3
+            std::cout << "Skipping state (stepback): " << state << std::endl;
 #endif
-            //new element, time to expand
-            updateSearchStates(statePtr, gcp, lm, pq);
-
-            // printf("State Expansion not yet implemeneted\n");
-            // updateSearchStates(state, pq, gcp,
-            //         bimapPositionInt, positionAdjSegIndexMapping,
-            //         printedSegmentsIndexes);
         }else{
-            // already in the state, so no need to store
-            visitedObjects.popLast();
+            mostCompleteState = std::max(mostCompleteState, state.getBitset().getSetCount());
+
+            RecomputeState* statePtr = visitedObjects.push(state);
+
+            if(visitedSet.insert(statePtr).second){
+#ifdef DEBUG_1
+                std::cout << "Expanding state " << state << std::endl;
+#endif
+                //new element, time to expand
+                updateSearchStates(statePtr, gcp, lm, pq);
+
+                // printf("State Expansion not yet implemeneted\n");
+                // updateSearchStates(state, pq, gcp,
+                //         bimapPositionInt, positionAdjSegIndexMapping,
+                //         printedSegmentsIndexes);
+            }else{
+                // already in the state, so no need to store
+                visitedObjects.popLast();
+            }
         }
 
         // remove the item from the state
@@ -114,8 +136,8 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
             printf("Total %d states expanded. ", expandedStates);
             printf("Pending states %llu; Best state %u/%u printed.\n", pq.size(), mostCompleteState, lm.getTotalPrintSegments());
         }
-        if(expandedStates > 100000){
-            printf("100,000 states expanded without goal, terminating.\n");
+        if(expandedStates > 1000000000){
+            printf("1,000,000,000 states expanded without goal, terminating.\n");
             exit(99);
         }
 #endif
@@ -129,6 +151,16 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
         //TODO - this should probably raise a runtime exception
         return;
     }
+
+#ifdef DEBUG_1
+    printf("At exit time, there were %llu elements left in the queue\n", pq.size());
+    while(pq.size() > 0){
+        const RecomputeState state = pq.top();
+        std::cout << "Current state: " << state << std::endl;
+        pq.pop();
+    }
+    std::cout << std::endl;
+#endif
 
 #ifdef DEBUG
     printf("Layer successfully found a goal after %d states at depth %d.\n", expandedStates, pq.top().getDepth());
@@ -164,7 +196,7 @@ void prunedAStar(const GCodeParser& gcp){
 
 void updateSearchStates(
     const RecomputeState* state, const GCodeParser& gcp,
-    const LayerManager& lm, std::priority_queue<RecomputeState>& pq)
+    const LayerManager& lm, State_PQ& pq)
 {
 
 #ifdef DEBUG_3
@@ -252,10 +284,16 @@ void updateSearchStates(
                 DynamicBitset newDBS = state->getBitset();
                 newDBS.set(a1AdjBitsetIndex);
                 newDBS.set(a2AdjBitsetIndex);
+                RecomputeState newState(a1NewPosIndex, a2NewPosIndex, state->getDepth()+1, newDBS, state);
 #ifdef DEBUG_1
-                std::cout << "Pushing new state " << RecomputeState(a1NewPosIndex, a2NewPosIndex, state->getDepth()+1, newDBS, state) << std::endl;
+                std::cout << "Pushing new state " << newState << std::endl;
+
+                //NO-COMMIT
+                if(a1NewPosIndex == 0 && a2NewPosIndex == 2 && (state->getDepth() + 1) == 2 && newDBS.getUnsetCount() == 4){
+                    printf("Here comes the magic state\n");
+                }
 #endif
-                pq.push(RecomputeState(a1NewPosIndex, a2NewPosIndex, state->getDepth()+1, newDBS, state));
+                pq.push(RecomputeState(newState));
 #ifdef DEBUG_3
                 newStatesAdded += 1;
             }
@@ -283,7 +321,7 @@ void updateSearchStates(
 }
 
 void generateStartingPositions(const GCodeParser& gcp,
-        const LayerManager& lm, std::priority_queue<RecomputeState>& pq)
+        const LayerManager& lm, State_PQ& pq)
 {
     unsigned int totalPositions = lm.getTotalPositions();
     DynamicBitset startBitset(lm.getTotalPrintSegments());
@@ -307,7 +345,11 @@ void generateStartingPositions(const GCodeParser& gcp,
 #ifdef DEBUG_3
                 std::cout << "Adding new start point pair: " << pi << " " << pj << std::endl;
 #endif
-                pq.push(RecomputeState(i, j, 0, startBitset, nullptr));
+                RecomputeState newState(i, j, 0, startBitset, nullptr);
+#ifdef DEBUG_1
+                std::cout << "Pushing new state " << newState << std::endl;
+#endif
+                pq.push(newState);
             }
         }
     }

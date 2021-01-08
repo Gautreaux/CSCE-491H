@@ -19,6 +19,31 @@
 typedef BiMap<Point3, unsigned int> PosIndexBiMap;
 typedef std::vector<std::vector<unsigned int>> PosSegMap;
 
+//compare types for a quick change of whats going on
+typedef std::less<RecomputeState> DefaultCompare;
+// struct DepthCompare {
+// public:
+//     bool operator()(const RecomputeState& lhs, const RecomputeState& rhs){
+//         return lhs.getBitset().getUnsetCount() > rhs.getBitset().getUnsetCount();
+//         // if(lhs.getDepth() < rhs.getDepth()){
+//         //     return true;
+//         // }else if(lhs.getDepth() > rhs.getDepth()){
+//         //     return false;
+//         // }
+//         // return lhs < rhs;
+//     }
+// };
+typedef std::priority_queue<RecomputeState, std::vector<RecomputeState>, DefaultCompare> State_PQ;
+
+
+struct StatePointerCompare{
+    bool operator() (const RecomputeState* lhs, const RecomputeState* rhs) const {
+        return (*lhs) < (*rhs);
+    }
+};
+
+typedef std::set<RecomputeState*, StatePointerCompare> State_Set;
+
 #define COLLISION_TOLERANCE 25
 
 // do a pruned AStar Search on a single layer
@@ -48,10 +73,10 @@ inline bool isValidSegmentsPair(const GCodeSegment& s1, const GCodeSegment& s2){
 // do the updating of the search states
 void updateSearchStates(
     const RecomputeState* state, const GCodeParser& gcp,
-    const LayerManager& lm, std::priority_queue<RecomputeState>& pq);
+    const LayerManager& lm, State_PQ& pq);
 
 //using the gcp and the lm, push all the items into the PriorityQueue
-void generateStartingPositions(const GCodeParser& gcp, const LayerManager& lm, std::priority_queue<RecomputeState>& pq);
+void generateStartingPositions(const GCodeParser& gcp, const LayerManager& lm, State_PQ& pq);
 
 //print a more verbose representation of the state
 void printVerbose(std::ostream& os, const RecomputeState& state, const GCodeParser& gcp, const LayerManager& lm);

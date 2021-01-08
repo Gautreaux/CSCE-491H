@@ -7,19 +7,25 @@
 using std::cout;
 using std::endl;
 
+#define DEFAULT_FILEPATH "TestingFiles/simpleRecomputable.gcode"
+
 int main(int argc, char ** argv){
     cout << "HELLO THERE " << endl;
 
-    //GCodeParser gcp("cpp_impl/TestingFiles/simpleTest.gcode");
-    //GCodeParser gcp("TestingFiles/simpleTest.gcode");
-    
-    //GCodeParser gcp("cpp_impl/TestingFiles/simpleRecomputable.gcode");
-    //GCodeParser gcp("TestingFiles/simpleRecomputable.gcode");
+    std::string filePath;
+    if(argc >= 2){
+        filePath = std::string(argv[1]);
+    }else{
+        printf("No command line file path provided, using default.\n");
+        filePath = DEFAULT_FILEPATH;
+    }
+    printf("Filepath resolved to %s\n", filePath.c_str());
 
-    //GCodeParser gcp("cpp_impl/TestingFiles/mediumRecomputable.gcode");
-    //GCodeParser gcp("TestingFiles/mediumRecomputable.gcode");
+    GCodeParser gcp(filePath);
 
-    GCodeParser gcp("gcodeSampleSet/81191.gcode");
+    //FYI - letting this run ~10million states with only dual moves.
+    //  can get to ~330/652 printed on the first layer
+    //GCodeParser gcp("gcodeSampleSet/81191.gcode");
 
     if(gcp){
         printf("Found %d segments in %d layers in the file.\n", gcp.numberSegments(), gcp.numberZLayers());

@@ -4,25 +4,23 @@ CPPSTD=-std=c++11# which c++ version to use
 
 CPP_COMP_COM=$(CXX) $(CPPFLAGS) $(CPPSTD)
 CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c -Wall -o $@ $<
+CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -o $@ $< *.o
 
 EXECUTABLE=Main.exe
 
 # declaring a phony forces the top level to always rebuild
-.PHONY: $(EXECUTABLE) Main.o
+.PHONY: $(EXECUTABLE) tests
 
-all : $(EXECUTABLE)
+all : $(EXECUTABLE) tests
 
 force : clean $(EXECUTABLE)
 
 clean :
 	del /S *.o
-	del Main.exe
+	del /S *.exe
 
-$(EXECUTABLE) : Main.o GCodeParser.o PrunedAStar.o
-	$(CPP_COMP_COM) -o $(EXECUTABLE) *.o
-
-Main.o : Main.cpp GCodeParser.o PrunedAStar.o
-	$(CC_COMPLIE_NO_LINK_AUTO)
+$(EXECUTABLE) : Main.cpp GCodeParser.o PrunedAStar.o
+	$(CC_COMPILE_LINK_EXE_AUTO)
 
 # geometry files 
 GCodeParser.o : GCodeParser.cpp GCodeParser.h GCodeSegment.o Point3.o pch.o
@@ -65,6 +63,20 @@ BiMap.o : UtilLib/BiMap.cpp UtilLib/BiMap.h pch.o
 
 NonReallocVector.o : UtilLib/NonReallocVector.cpp UtilLib/NonReallocVector.h pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
+
+
+# testing files
+test : tests
+tests : PQTest.exe
+	PQTest.exe > test.txt
+	python CheckPopPush.py
+
+PQTest.exe : TestingCode/PQTest.cpp DynamicBitset.o RecomputeState.o PrunedAStar.o Pch.o
+	$(CC_COMPILE_LINK_EXE_AUTO)
+
+PQTest2.exe : TestingCode/PQTest2.cpp DynamicBitset.o RecomputeState.o PrunedAStar.o Pch.o
+	$(CC_COMPILE_LINK_EXE_AUTO)
+
 
 # Uses builtin .cpp -> .o translation instead
 #	which is basically this rule anyway

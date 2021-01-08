@@ -37,21 +37,21 @@ inline bool operator!=(const Point3& lhs, const Point3& rhs){
 }
 
 inline bool operator<(const Point3& lhs, const Point3& rhs){
-    if(lhs.getX() < rhs.getX()){
+    if(DOUBLE_LT(lhs.getX(), rhs.getX())){
         return true;
-    }else if(lhs.getX() > rhs.getX()){
+    }else if(DOUBLE_GT(lhs.getX(), rhs.getX())){
         return false;
     }  
     //x dim is equal
 
-    if(lhs.getY() < rhs.getY()){
+    if(DOUBLE_LT(lhs.getY(), rhs.getY())){
         return true;
-    }else if(lhs.getY() > rhs.getY()){
+    }else if(DOUBLE_GT(lhs.getY(), rhs.getY())){
         return false;
     }
     //y dim is also equal
 
-    return lhs.getZ() < rhs.getZ();
+    return DOUBLE_LT(lhs.getZ(), rhs.getZ());
 }
 
 inline Point3 operator-(const Point3& lhs, const Point3& rhs){
