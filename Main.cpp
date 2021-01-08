@@ -23,8 +23,8 @@ int main(int argc, char ** argv){
 
     GCodeParser gcp(filePath);
 
-    //FYI - letting this run ~10million states with only dual moves.
-    //  can get to ~330/652 printed on the first layer
+    //FYI - letting this run  with only dual moves.
+    //  can get to 344/652 printed on the first layer
     //GCodeParser gcp("gcodeSampleSet/81191.gcode");
 
     if(gcp){

@@ -21,19 +21,19 @@ typedef std::vector<std::vector<unsigned int>> PosSegMap;
 
 //compare types for a quick change of whats going on
 typedef std::less<RecomputeState> DefaultCompare;
-// struct DepthCompare {
-// public:
-//     bool operator()(const RecomputeState& lhs, const RecomputeState& rhs){
-//         return lhs.getBitset().getUnsetCount() > rhs.getBitset().getUnsetCount();
-//         // if(lhs.getDepth() < rhs.getDepth()){
-//         //     return true;
-//         // }else if(lhs.getDepth() > rhs.getDepth()){
-//         //     return false;
-//         // }
-//         // return lhs < rhs;
-//     }
-// };
-typedef std::priority_queue<RecomputeState, std::vector<RecomputeState>, DefaultCompare> State_PQ;
+struct DepthCompare {
+public:
+    bool operator()(const RecomputeState& lhs, const RecomputeState& rhs){
+        return lhs.getBitset().getUnsetCount() > rhs.getBitset().getUnsetCount();
+        // if(lhs.getDepth() < rhs.getDepth()){
+        //     return true;
+        // }else if(lhs.getDepth() > rhs.getDepth()){
+        //     return false;
+        // }
+        // return lhs < rhs;
+    }
+};
+typedef std::priority_queue<RecomputeState, std::vector<RecomputeState>, DepthCompare> State_PQ;
 
 
 struct StatePointerCompare{
