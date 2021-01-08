@@ -18,6 +18,8 @@ def isRelevantLine(line):
     return False
 
 def assertNoMoreRelevant(line_gen):
+    '''Assert that the line_gen contains no more relevant lines'''
+    # i.e. both generators stop at the same point
     for line in line_gen:
         assert(isRelevantLine(line) == False)
 
@@ -46,6 +48,7 @@ if __name__ == "__main__":
                             break
                 except StopIteration:
                     assertNoMoreRelevant(gen_b)
+                    break
 
                 try:
                     while(True):
@@ -54,6 +57,7 @@ if __name__ == "__main__":
                             break
                 except StopIteration:
                     assertNoMoreRelevant(gen_a)
+                    break
 
                 try:
                     assert(line_a == line_b)

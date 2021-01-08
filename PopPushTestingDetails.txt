@@ -1,0 +1,12 @@
+Trying to figure out why the pops and pushes don't match
+
+Steps:
+Compile/Run main, save output to text file
+use python to CheckPopPush.py
+    reports on the total mis-matched
+use python to CheckPopPush2.py
+    creates a .cpp file that does the same push/pop sequence
+        as reported by the main output
+Compile/Run this file, save output to the text file
+use python to CheckPopPush3.py
+    compares the pop and push lines, alerting on a mismatch
