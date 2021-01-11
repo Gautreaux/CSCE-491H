@@ -58,14 +58,15 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
             stateGenerators[currentGenerator](bestState, gcp, lm, pq);
             printVerbose(std::cout, *bestState, gcp, lm);
         }
+#ifdef DEBUG
+        printf("Starting new general Expansion (lvl 0,1); best %p, states %llu\n", lastBest, pq.size());
+#endif
         //now actually attempt expansion
         while(!pq.empty()){
             RecomputeState state = pq.top();
 
             // remove the item from the queue
-            //std::cout << "PriorityQueue size (pre-pop) : " << pq.size() << std::endl;
             pq.pop();
-            //std::cout << "PriorityQueue size (post-pop): " << pq.size() << std::endl;
 
             expandedStates += 1;
 
@@ -112,6 +113,7 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
 #endif
                     //new element, time to expand
                     stateGenerators[0](statePtr, gcp, lm, pq);
+                    stateGenerators[1](statePtr, gcp, lm, pq);
                 }else{
                     //this shouldn't be possible, right?
                     // the best state has to be new;
@@ -139,7 +141,7 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
             if(lastBest == bestState){
                 currentGenerator++;
             }else{
-                currentGenerator = 1;
+                currentGenerator = 2;
                 lastBest = bestState;
             }
             // printf("Elevating state generation to %u, current best: %u/%u\n", currentGenerator, mostCompleteState, lm.getTotalPrintSegments());
