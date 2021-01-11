@@ -54,5 +54,22 @@ public:
         return mapBtoA.end();
     }
 
+    typename map<A,B>::const_iterator findByABegin(void) const {
+        return mapAtoB.begin();
+    }
+
+    typename map<A, B>::const_iterator findByAEnd(void) const {
+        return mapAtoB.end();
+    }
+
+    typename map<B, A>::const_iterator findByBBegin(void) const {
+        return mapBtoA.begin();
+    }
+
+    typename map<B, A>::const_iterator findByBEnd(void) const {
+        return mapBtoA.end();
+    }
+
+
     //TODO - add removeByA, removeByB
 };

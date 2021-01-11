@@ -197,24 +197,42 @@ void updateSearchStates(
     std::cout << "Resolved positions: " << a1Pos << " " << a2Pos << std::endl;
 #endif
 
-    //first attempt to find states where both agents can print-move to a new position
+    //pre-caching which of the adjacent segments are valid transitions
+    std::vector<Bitset_Index> a1ValidAdjBitsets;
+    std::vector<Bitset_Index> a2ValidAdjBitsets;
+
+    //since this check is needed in many items, we do it here instead
     for(Bitset_Index a1AdjBitsetIndex : lm.getAdjacentSegments(a1PosIndex)){
         if(state->getBitset().at(a1AdjBitsetIndex)){
 #ifdef DEBUG_3
             std::cout << "Skipping seg (bitset_index) for A1 as it was already printed: " << a1AdjBitsetIndex << std::endl;
 #endif
             continue;
+        }else{
+            //the index is a valid print transitions
+            a1ValidAdjBitsets.push_back(a1AdjBitsetIndex);
         }
+    }
+
+    //since this check is needed in many items, we do it here instead
+    for(Bitset_Index a2AdjBitsetIndex : lm.getAdjacentSegments(a2PosIndex)){
+        if(state->getBitset().at(a2AdjBitsetIndex)){
+#ifdef DEBUG_3
+            std::cout << "Skipping seg (bitset_index) for A2 as it was already printed: " << a2AdjBitsetIndex << std::endl;
+#endif
+            continue;
+        }else{
+            //the index is a valid print transitions
+            a2ValidAdjBitsets.push_back(a2AdjBitsetIndex);
+        }
+    }
+
+    //first attempt to find states where both agents can print-move to a new position
+    for(Bitset_Index a1AdjBitsetIndex : a1ValidAdjBitsets){
         const GCP_Index a1GCPIndex = lm.getGCPFromBitset(a1AdjBitsetIndex);
         const GCodeSegment& a1Segment = gcp.at(a1GCPIndex);
 
-        for(Bitset_Index a2AdjBitsetIndex : lm.getAdjacentSegments(a2PosIndex)){
-            if(state->getBitset().at(a2AdjBitsetIndex)){
-#ifdef DEBUG_3
-                std::cout << "Skipping seg (bitset_index) for A2 as it was already printed: " << a2AdjBitsetIndex << std::endl;
-#endif
-                continue;
-            }
+        for(Bitset_Index a2AdjBitsetIndex : a2ValidAdjBitsets){
             const GCP_Index a2GCPIndex = lm.getGCPFromBitset(a2AdjBitsetIndex);
             const GCodeSegment& a2Segment = gcp.at(a2GCPIndex);
 
@@ -282,13 +300,7 @@ void updateSearchStates(
     }
 
     //create the states where a1 prints and a2 NOOP
-    //this loop could be moved into the loop above
-    //  might save some efficiency in these searches that follow
-    for(Bitset_Index a1AdjBitsetIndex : lm.getAdjacentSegments(a1PosIndex)){
-        if(state->getBitset().at(a1AdjBitsetIndex)){
-            //this segment was already printed, so skip
-            continue;
-        }
+    for(Bitset_Index a1AdjBitsetIndex : a1ValidAdjBitsets){
         const GCP_Index a1GCPIndex = lm.getGCPFromBitset(a1AdjBitsetIndex);
         const GCodeSegment& a1Segment = gcp.at(a1GCPIndex);
 
@@ -308,14 +320,7 @@ void updateSearchStates(
     }
 
     //create the states where a2Prints and a1 NOOP
-    //this loop is harder to move into the dual-move loop
-    //  but using a bool flag or something it should be possible and 
-    //  may make sense from an efficiency standpoint
-    for(Bitset_Index a2AdjBitsetIndex : lm.getAdjacentSegments(a2PosIndex)){
-        if(state->getBitset().at(a2AdjBitsetIndex)){
-            //this segment was already printed, so skip
-            continue;
-        }
+    for(Bitset_Index a2AdjBitsetIndex : a2ValidAdjBitsets){
         const GCP_Index a2GCPIndex = lm.getGCPFromBitset(a2AdjBitsetIndex);
         const GCodeSegment& a2Segment = gcp.at(a2GCPIndex);
 
@@ -334,13 +339,135 @@ void updateSearchStates(
         }
     }
 
-    //TODO - more transitions (in no real order)
-    // a1 print, a2 move
-    // a2 print, a1 move
-    // a1 move, a2 noop
-    // a1 move, a2 move
+    // create the list of new positions that are incident on
+    //  an unprinted segment
+    std::vector<Position_Index> posIndexUnprintedIncident;
+    for(auto newPosIter = lm.getPointsStartIterator(); newPosIter != lm.getPointsEndIterator(); newPosIter++){
+        // const Point3& newPos = newPosIter->first;
+        const Position_Index newPosIndex = newPosIter->second;
+
+        for(Bitset_Index possibleAdjBitsetIndex : lm.getAdjacentSegments(newPosIndex)){
+            if(state->getBitset().at(possibleAdjBitsetIndex)){
+                //it is set, do nothing
+            }else{
+                //for this newPos there is a new segment that 
+                //  that is incident and not printed
+                posIndexUnprintedIncident.push_back(newPosIndex);
+                break; // we only care if there is one, not what it is
+            }
+        }
+    }
+
+    //create the states where a1 prints and a2 move to a new position
+    for(Bitset_Index a1AdjBitsetIndex : a1ValidAdjBitsets){
+        //TODO - these two lookups are repeated several times, perhaps they should be cached
+        const GCP_Index a1GCPIndex = lm.getGCPFromBitset(a1AdjBitsetIndex);
+        const GCodeSegment& a1Segment = gcp.at(a1GCPIndex);
+
+        const Point3& a1NewPos = a1Segment.getOppositeEndpoint(a1Pos);
+        const Position_Index a1NewPosIndex = lm.getPosFromPoint3(a1NewPos);
+
+        //now we want to find the set of all possible new a2 positions where
+        //  1. the new position is incident on an unprinted segment (above)
+        //  2. the transition from current pos to new pos does not intersect the 
+        //       segment to be printed by a1
+        for(Position_Index a2NewPosIndex : posIndexUnprintedIncident){
+            GCodeSegment newSegment(a2Pos, lm.getPoint3FromPos(a2NewPosIndex), 0);
+            if(isValidSegmentsPair(a1Segment, newSegment)){
+                DynamicBitset newDBS = state->getBitset();
+                newDBS.set(a1AdjBitsetIndex);
+                RecomputeState newState(a1NewPosIndex, a2NewPosIndex, state->getDepth()+1, newDBS, state);
+#ifdef DEBUG_1
+                std::cout << "Pushing new state " << newState << std::endl;
+#endif
+                pq.push(newState);
+            }
+        }
+
+    }
+
+    //create the states where a2 prints and a1 move to a new position
+    for(Bitset_Index a2AdjBitsetIndex : a2ValidAdjBitsets){
+        //TODO - these two lookups are repeated several times, perhaps they should be cached
+        const GCP_Index a2GCPIndex = lm.getGCPFromBitset(a2AdjBitsetIndex);
+        const GCodeSegment& a2Segment = gcp.at(a2GCPIndex);
+
+        const Point3& a2NewPos = a2Segment.getOppositeEndpoint(a2Pos);
+        const Position_Index a2NewPosIndex = lm.getPosFromPoint3(a2NewPos);
+
+        //now we want to find the set of all possible new a1 positions where
+        //  1. the new position is incident on an unprinted segment (above)
+        //  2. the transition from current pos to new pos does not intersect the 
+        //       segment to be printed by a2
+        for(Position_Index a1NewPosIndex : posIndexUnprintedIncident){
+            GCodeSegment newSegment(a1Pos, lm.getPoint3FromPos(a1NewPosIndex), 0);
+            if(isValidSegmentsPair(newSegment, a2Segment)){
+                DynamicBitset newDBS = state->getBitset();
+                newDBS.set(a2AdjBitsetIndex);
+                RecomputeState newState(a1NewPosIndex, a2NewPosIndex, state->getDepth()+1, newDBS, state);
+#ifdef DEBUG_1
+                std::cout << "Pushing new state " << newState << std::endl;
+#endif
+                pq.push(newState);
+            }
+        }
+    }
+
+    // now for the states that are going to really balloon things
+    // these "work" but its a absurd amount of states
+    //  something like 3*(n^2) where n = number of segments in the layer
+    //  i.e. if layer has 577 segments, 1 million states are generated
+    //      (some reduction happens as segments are printed) 
+    // TODO - develop some pruning method for these
+
+    // a1 move & a2 move to new spots incident on unprinted segments
+    for(Position_Index a1NewPosIndex : posIndexUnprintedIncident){
+        const Point3& a1NewPos = lm.getPoint3FromPos(a1NewPosIndex);
+        GCodeSegment newA1Seg(a1Pos, a1NewPos, 0);
+
+        for(Position_Index a2NewPosIndex : posIndexUnprintedIncident){
+            if(a1NewPosIndex == a2NewPosIndex){
+                continue;
+            }
+            const Point3& a2NewPos = lm.getPoint3FromPos(a2NewPosIndex);
+            GCodeSegment newA2Seg(a2Pos, a2NewPos, 0);
+
+            if(isValidSegmentsPair(newA1Seg, newA2Seg)){
+                RecomputeState newState(a1NewPosIndex, a2NewPosIndex, state->getDepth()+1, state->getBitset(), state);
+#ifdef DEBUG_1
+                std::cout << "Pushing new state " << newState << std::endl;
+#endif
+                pq.push(newState);
+            }
+        }
+    }
+
+    //a1 move, a2 noop
+    for(Position_Index a1NewPosIndex : posIndexUnprintedIncident){
+        const Point3& a1NewPos = lm.getPoint3FromPos(a1NewPosIndex);
+        GCodeSegment newA1Seg(a1Pos, a1NewPos, 0);
+
+        if(isValidSegNOOP(newA1Seg, a2Pos)){
+            RecomputeState newState(a1NewPosIndex, a2PosIndex, state->getDepth()+1, state->getBitset(), state);
+#ifdef DEBUG_1
+            std::cout << "Pushing new state " << newState << std::endl;
+#endif
+            pq.push(newState);
+        }
+    }
+
     // a2 move, a1 noop
-    // a2 move, a1 move
+    for(Position_Index a2NewPosIndex : posIndexUnprintedIncident){
+        const Point3& a2NewPos = lm.getPoint3FromPos(a2NewPosIndex);
+        GCodeSegment newA2Seg(a2Pos, a2NewPos, 0);
+        if(isValidSegNOOP(a1Pos, newA2Seg)){
+            RecomputeState newState(a1PosIndex, a2NewPosIndex, state->getDepth()+1, state->getBitset(), state);
+#ifdef DEBUG_1
+            std::cout << "Pushing new state " << newState << std::endl;
+#endif
+            pq.push(newState);
+        }
+    }
 
 #ifdef DEBUG_3
     std::cout << "Finishing state expansion, added # new states: " << newStatesAdded << std::endl;

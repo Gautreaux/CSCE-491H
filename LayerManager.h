@@ -55,6 +55,18 @@ public:
         return adjacentSegments.at(i);
     }
 
+    //iterators
+
+    // get the iterator to the beginning of the points
+    inline std::map<Point3, Position_Index>::const_iterator getPointsStartIterator(void) const{
+        return pointPositionIndexTranslation.findByABegin();
+    }
+
+    // get iterator to the end of the points
+    inline std::map<Point3, Position_Index>::const_iterator getPointsEndIterator(void) const{
+        return pointPositionIndexTranslation.findByAEnd();
+    }
+
 };
     
 // inline const GCodeSegment& findSegmentByGCPIndex(const GCP_Index i, const GCodeParser& gcp);
