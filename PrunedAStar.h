@@ -25,7 +25,7 @@
 #endif
 
 // maximum number of print segments allowed in a step back 
-#define MAX_STEPBACK_ALLOWED 1000000
+#define MAX_STEPBACK_ALLOWED 100
 
 
 typedef BiMap<Point3, unsigned int> PosIndexBiMap;
@@ -116,13 +116,34 @@ inline bool isValidSegNOOP(const Point3& a1Pos, const GCodeSegment& a2Segment){
     return a2Segment.minSeperationDistance(a1Pos) >= COLLISION_TOLERANCE;
 }
 
-// do the updating of the search states
-void updateSearchStates(
-    const RecomputeState* state, const GCodeParser& gcp,
-    const LayerManager& lm, State_PQ& pq);
-
 //using the gcp and the lm, push all the items into the PriorityQueue
 void generateStartingPositions(const GCodeParser& gcp, const LayerManager& lm, State_PQ& pq);
 
 //print a more verbose representation of the state
 void printVerbose(std::ostream& os, const RecomputeState& state, const GCodeParser& gcp, const LayerManager& lm);
+
+// do the updating of the search states
+//typdef the function pointer for state generators
+typedef void(*StateGeneratorFunctionPtr)(const RecomputeState*, const GCodeParser&, const LayerManager&, State_PQ&);
+#define QTY_STATE_GENERATORS 4
+
+//add all the dual print moves to the queue
+void updateSearchStatesDualPrints(
+    const RecomputeState* state, const GCodeParser& gcp,
+    const LayerManager& lm, State_PQ& pq);
+
+//add all the print noop states to the queue
+void updateSearchStatesSinglePrintNoOp(
+    const RecomputeState* state, const GCodeParser& gcp,
+    const LayerManager& lm, State_PQ& pq);
+
+//add all the print single move to the queue
+void updateSearchStatesSinglePrintMove(
+    const RecomputeState* state, const GCodeParser& gcp,
+    const LayerManager& lm, State_PQ& pq);
+
+//desperatelly add any possible state to the queue
+//  hopefully never called
+void updateSearchStatesRemainingStates(
+    const RecomputeState* state, const GCodeParser& gcp,
+    const LayerManager& lm, State_PQ& pq);

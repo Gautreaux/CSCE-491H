@@ -14,6 +14,7 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
     
     unsigned int expandedStates = 0; //TODO - really more of an explored states than expanded states
     const RecomputeState* foundGoal = nullptr;
+    const RecomputeState* bestState = nullptr;
     unsigned int mostCompleteState = 0; // maximum number of printed segments in any explored state
 
     generateStartingPositions(gcp, lm, pq);
@@ -42,83 +43,107 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
     //      requiring one to move-no-print away so that the other can print
 
 
-    while(!pq.empty()){
-        RecomputeState state = pq.top();
+    StateGeneratorFunctionPtr stateGenerators[] = {
+        updateSearchStatesDualPrints,
+        updateSearchStatesSinglePrintNoOp,
+        updateSearchStatesSinglePrintMove,
+        updateSearchStatesRemainingStates
+    };
+    unsigned int currentGenerator = 0;
+    const RecomputeState* lastBest = nullptr;
 
-        // remove the item from the queue
-        //std::cout << "PriorityQueue size (pre-pop) : " << pq.size() << std::endl;
-        pq.pop();
-        //std::cout << "PriorityQueue size (post-pop): " << pq.size() << std::endl;
+    while(currentGenerator < QTY_STATE_GENERATORS){
+        if(pq.empty()){
+            printf("Expanding %p at level %u\n", bestState, currentGenerator);
+            stateGenerators[currentGenerator](bestState, gcp, lm, pq);
+            printVerbose(std::cout, *bestState, gcp, lm);
+        }
+        //now actually attempt expansion
+        while(!pq.empty()){
+            RecomputeState state = pq.top();
 
-        expandedStates += 1;
+            // remove the item from the queue
+            //std::cout << "PriorityQueue size (pre-pop) : " << pq.size() << std::endl;
+            pq.pop();
+            //std::cout << "PriorityQueue size (post-pop): " << pq.size() << std::endl;
+
+            expandedStates += 1;
 
 #ifdef DEBUG_1
-        std::cout << "Current state: " << state << std::endl;
+            std::cout << "Current state: " << state << std::endl;
 #endif
 
-        //check if goal
-        if(state.getBitset().getUnsetCount() == 0){
+            //check if goal
+            if(state.getBitset().getUnsetCount() == 0){
 #ifdef DEBUG
-            const DynamicBitset& bs = state.getBitset();
-            printf("GOAL BS: size %d, set count %d, unset count %d\n", bs.size(), bs.getSetCount(), bs.getUnsetCount());
-            //printf("Start BS: size %d, set count %d, unset count %d\n", startBitset.size(), startBitset.getSetCount(), startBitset.getUnsetCount());
-            printf("Depth: %d\n", state.getDepth());
-            std::cout << "Goal State: " << state << std::endl;
+                const DynamicBitset& bs = state.getBitset();
+                printf("GOAL BS: size %d, set count %d, unset count %d\n", bs.size(), bs.getSetCount(), bs.getUnsetCount());
+                //printf("Start BS: size %d, set count %d, unset count %d\n", startBitset.size(), startBitset.getSetCount(), startBitset.getUnsetCount());
+                printf("Depth: %d\n", state.getDepth());
+                std::cout << "Goal State: " << state << std::endl;
 #endif
-            std::cout << std::endl; //force a flush
-            foundGoal = visitedObjects.push(state);
-            break;
-        }
+                std::cout << std::endl; //force a flush
+                foundGoal = visitedObjects.push(state);
+                break;
+            }
 
-        if((state.getDepth() + MAX_STEPBACK_ALLOWED) < mostCompleteState){
-            //skip this state b/c it goes too far back
-            // as a bonus, since most mostCompleteState is always increasing
-            //  we do not need to add this to the visitedSet, saving memory
+            if((state.getDepth() + MAX_STEPBACK_ALLOWED) < mostCompleteState){
+                //skip this state b/c it goes too far back
+                // as a bonus, since most mostCompleteState is always increasing
+                //  we do not need to add this to the visitedSet, saving memory
 #ifdef DEBUG_3
-            std::cout << "Skipping state (stepback): " << state << std::endl;
+                std::cout << "Skipping state (stepback): " << state << std::endl;
 #endif
-        }else{
-            if(state.getBitset().getSetCount() > mostCompleteState){
-                mostCompleteState = state.getBitset().getSetCount();
-#ifdef DEBUG
-                printf("New best state: %u/%u, expanded: %d, pending: %llu\n",
-                    state.getBitset().getSetCount(), lm.getTotalPrintSegments(),
-                    expandedStates, pq.size());
-#endif
-            }
-
-            RecomputeState* statePtr = visitedObjects.push(state);
-
-            if(visitedSet.insert(statePtr).second){
-#ifdef DEBUG_1
-                std::cout << "Expanding state " << state << std::endl;
-#endif
-                //new element, time to expand
-                updateSearchStates(statePtr, gcp, lm, pq);
-
-                // printf("State Expansion not yet implemeneted\n");
-                // updateSearchStates(state, pq, gcp,
-                //         bimapPositionInt, positionAdjSegIndexMapping,
-                //         printedSegmentsIndexes);
             }else{
-                // already in the state, so no need to store
-                visitedObjects.popLast();
+                RecomputeState* statePtr = visitedObjects.push(state);
+                if(state.getBitset().getSetCount() > mostCompleteState){
+                    mostCompleteState = state.getBitset().getSetCount();
+                    bestState = statePtr;
+#ifdef DEBUG
+                    printf("New best state: %u/%u, expanded: %d, pending: %llu\n",
+                        state.getBitset().getSetCount(), lm.getTotalPrintSegments(),
+                        expandedStates, pq.size());
+#endif
+                }
+
+                if(visitedSet.insert(statePtr).second){
+#ifdef DEBUG_1
+                    std::cout << "Expanding state " << state << std::endl;
+#endif
+                    //new element, time to expand
+                    stateGenerators[0](statePtr, gcp, lm, pq);
+                }else{
+                    //this shouldn't be possible, right?
+                    // the best state has to be new;
+                    assert(statePtr != bestState);
+
+                    // already in the state, so no need to store
+                    visitedObjects.popLast();
+                }
             }
-        }
 
 
 #ifdef DEBUG
-        //reporting
-        if(expandedStates % LOOP_PRINT_FREQUENCY == 0){
-            printf("Total %d states expanded. ", expandedStates);
-            printf("Pending states %llu; Best state %u/%u printed.\n", pq.size(), mostCompleteState, lm.getTotalPrintSegments());
-        }
-        if(expandedStates > 100000000){
-            printf("100,000,000 states expanded without goal, terminating.\n");
-            exit(99);
-        }
+            //reporting
+            if(expandedStates % LOOP_PRINT_FREQUENCY == 0){
+                printf("Total %d states expanded. ", expandedStates);
+                printf("Pending states %llu; Best state %u/%u printed.\n", pq.size(), mostCompleteState, lm.getTotalPrintSegments());
+            }
+            if(expandedStates > 100000000){
+                printf("100,000,000 states expanded without goal, terminating.\n");
+                exit(99);
+            }
 #endif
-
+        }
+        if(foundGoal == nullptr){
+            if(lastBest == bestState){
+                currentGenerator++;
+            }else{
+                currentGenerator = 1;
+                lastBest = bestState;
+            }
+            // printf("Elevating state generation to %u, current best: %u/%u\n", currentGenerator, mostCompleteState, lm.getTotalPrintSegments());
+        }
     }
 
     if(foundGoal == nullptr){
@@ -174,30 +199,65 @@ void prunedAStar(const GCodeParser& gcp){
     }
 }
 
-void updateSearchStates(
+void generateStartingPositions(const GCodeParser& gcp,
+        const LayerManager& lm, State_PQ& pq)
+{
+    unsigned int totalPositions = lm.getTotalPositions();
+    DynamicBitset startBitset(lm.getTotalPrintSegments());
+#ifdef DEBUG_3
+    std::cout << "Start Bitset is ";
+    startBitset.printBitData(std::cout);
+    std::cout << std::endl;
+#endif
+
+    //need all the starting pairs b/c what if agents are not interchangable
+    for(unsigned int i = 0; i < totalPositions; i++){
+        for(unsigned int j = 0; j < totalPositions; j++){
+            if(i == j){
+                continue;
+            }
+
+            const Point3& pi = lm.getPoint3FromPos(i);
+            const Point3& pj = lm.getPoint3FromPos(j);
+
+            if(isValidPositionPair(pi,pj)){
+#ifdef DEBUG_3
+                std::cout << "Adding new start point pair: " << pi << " " << pj << std::endl;
+#endif
+                RecomputeState newState(i, j, 0, startBitset, nullptr);
+#ifdef DEBUG_1
+                std::cout << "Pushing new state " << newState << std::endl;
+#endif
+                //std::cout << "PriorityQueue size (pre-push) : " << pq.size() << std::endl;
+                pq.push(newState);
+                //std::cout << "PriorityQueue size (post-push): " << pq.size() << std::endl;
+            }
+        }
+    }
+}
+
+void printVerbose(std::ostream& os, const RecomputeState& state, const GCodeParser& gcp, const LayerManager& lm){
+    os << "A1: " << lm.getPoint3FromPos(state.getA1PosIndex()) << "(" << state.getA1PosIndex() << "), ";
+    os << "A2: " << lm.getPoint3FromPos(state.getA2PosIndex()) << "(" << state.getA2PosIndex() << "), ";
+    os << "Depth: " << state.getDepth() << ", ";
+    os << "BitData: ";
+    state.getBitset().printBitData(os);
+    os << std::endl;
+}
+
+//add all the dual print moves to the queue
+void updateSearchStatesDualPrints(
     const RecomputeState* state, const GCodeParser& gcp,
     const LayerManager& lm, State_PQ& pq)
 {
-
-#ifdef DEBUG_3
-    std::cout << "Beginning updateSearchStates for " << *state << std::endl;
-    std::cout << "Beginning recompute state bitset: \n\t";
-    state->getBitset().printBitData(std::cout);
-    std::cout << std::endl;
-    unsigned int newStatesAdded = 0;
-#endif
-
     const Position_Index a1PosIndex = state->getA1PosIndex();
     const Position_Index a2PosIndex = state->getA2PosIndex();
 
     const Point3& a1Pos = lm.getPoint3FromPos(a1PosIndex);
     const Point3& a2Pos = lm.getPoint3FromPos(a2PosIndex);
 
-#ifdef DEBUG_3
-    std::cout << "Resolved positions: " << a1Pos << " " << a2Pos << std::endl;
-#endif
 
-    //pre-caching which of the adjacent segments are valid transitions
+     //pre-caching which of the adjacent segments are valid transitions
     std::vector<Bitset_Index> a1ValidAdjBitsets;
     std::vector<Bitset_Index> a2ValidAdjBitsets;
 
@@ -227,7 +287,6 @@ void updateSearchStates(
         }
     }
 
-    //first attempt to find states where both agents can print-move to a new position
     for(Bitset_Index a1AdjBitsetIndex : a1ValidAdjBitsets){
         const GCP_Index a1GCPIndex = lm.getGCPFromBitset(a1AdjBitsetIndex);
         const GCodeSegment& a1Segment = gcp.at(a1GCPIndex);
@@ -238,9 +297,6 @@ void updateSearchStates(
 
             if(a1AdjBitsetIndex == a2AdjBitsetIndex){
                 assert(a1GCPIndex == a2GCPIndex);
-#ifdef DEBUG_3
-                std::cout << "Skipping move pairs as they are moving the same segment: (bitset) " << a1AdjBitsetIndex << ", (gcp) " << a1GCPIndex << std::endl;
-#endif
                 continue;
             }
 
@@ -286,16 +342,51 @@ void updateSearchStates(
 #ifdef DEBUG_1
                 std::cout << "Pushing new state " << newState << std::endl;
 #endif
-                //std::cout << "PriorityQueue size (pre-push) : " << pq.size() << std::endl;
                 pq.push(newState);
-                //std::cout << "PriorityQueue size (post-push): " << pq.size() << std::endl;
+            }
+        }
+    }
+}
+
+//add all the print noop states to the queue
+void updateSearchStatesSinglePrintNoOp(
+    const RecomputeState* state, const GCodeParser& gcp,
+    const LayerManager& lm, State_PQ& pq)
+{
+    const Position_Index a1PosIndex = state->getA1PosIndex();
+    const Position_Index a2PosIndex = state->getA2PosIndex();
+
+    const Point3& a1Pos = lm.getPoint3FromPos(a1PosIndex);
+    const Point3& a2Pos = lm.getPoint3FromPos(a2PosIndex);
+
+    
+    //pre-caching which of the adjacent segments are valid transitions
+    std::vector<Bitset_Index> a1ValidAdjBitsets;
+    std::vector<Bitset_Index> a2ValidAdjBitsets;
+
+    //since this check is needed in many items, we do it here instead
+    for(Bitset_Index a1AdjBitsetIndex : lm.getAdjacentSegments(a1PosIndex)){
+        if(state->getBitset().at(a1AdjBitsetIndex)){
 #ifdef DEBUG_3
-                newStatesAdded += 1;
-            }
-            else {
-                std::cout << "Dual-Move segments pair FAILED valid check (gcp_indexes): " << a1GCPIndex << " " << a2GCPIndex << std::endl;
+            std::cout << "Skipping seg (bitset_index) for A1 as it was already printed: " << a1AdjBitsetIndex << std::endl;
 #endif
-            }
+            continue;
+        }else{
+            //the index is a valid print transitions
+            a1ValidAdjBitsets.push_back(a1AdjBitsetIndex);
+        }
+    }
+
+    //since this check is needed in many items, we do it here instead
+    for(Bitset_Index a2AdjBitsetIndex : lm.getAdjacentSegments(a2PosIndex)){
+        if(state->getBitset().at(a2AdjBitsetIndex)){
+#ifdef DEBUG_3
+            std::cout << "Skipping seg (bitset_index) for A2 as it was already printed: " << a2AdjBitsetIndex << std::endl;
+#endif
+            continue;
+        }else{
+            //the index is a valid print transitions
+            a2ValidAdjBitsets.push_back(a2AdjBitsetIndex);
         }
     }
 
@@ -336,6 +427,52 @@ void updateSearchStates(
             std::cout << "Pushing new state " << newState << std::endl;
 #endif
             pq.push(newState);
+        }
+    }
+}
+
+//add all the print single move to the queue
+void updateSearchStatesSinglePrintMove(
+    const RecomputeState* state, const GCodeParser& gcp,
+    const LayerManager& lm, State_PQ& pq)
+{
+    const Position_Index a1PosIndex = state->getA1PosIndex();
+    const Position_Index a2PosIndex = state->getA2PosIndex();
+
+    const Point3& a1Pos = lm.getPoint3FromPos(a1PosIndex);
+    const Point3& a2Pos = lm.getPoint3FromPos(a2PosIndex);
+
+#ifdef DEBUG_3
+    std::cout << "Resolved positions: " << a1Pos << " " << a2Pos << std::endl;
+#endif
+
+    //pre-caching which of the adjacent segments are valid transitions
+    std::vector<Bitset_Index> a1ValidAdjBitsets;
+    std::vector<Bitset_Index> a2ValidAdjBitsets;
+
+    //since this check is needed in many items, we do it here instead
+    for(Bitset_Index a1AdjBitsetIndex : lm.getAdjacentSegments(a1PosIndex)){
+        if(state->getBitset().at(a1AdjBitsetIndex)){
+#ifdef DEBUG_3
+            std::cout << "Skipping seg (bitset_index) for A1 as it was already printed: " << a1AdjBitsetIndex << std::endl;
+#endif
+            continue;
+        }else{
+            //the index is a valid print transitions
+            a1ValidAdjBitsets.push_back(a1AdjBitsetIndex);
+        }
+    }
+
+    //since this check is needed in many items, we do it here instead
+    for(Bitset_Index a2AdjBitsetIndex : lm.getAdjacentSegments(a2PosIndex)){
+        if(state->getBitset().at(a2AdjBitsetIndex)){
+#ifdef DEBUG_3
+            std::cout << "Skipping seg (bitset_index) for A2 as it was already printed: " << a2AdjBitsetIndex << std::endl;
+#endif
+            continue;
+        }else{
+            //the index is a valid print transitions
+            a2ValidAdjBitsets.push_back(a2AdjBitsetIndex);
         }
     }
 
@@ -413,6 +550,39 @@ void updateSearchStates(
         }
     }
 
+}
+
+//desperatelly add any possible state to the queue
+//  hopefully never called
+void updateSearchStatesRemainingStates(
+    const RecomputeState* state, const GCodeParser& gcp,
+    const LayerManager& lm, State_PQ& pq)
+{
+    const Position_Index a1PosIndex = state->getA1PosIndex();
+    const Position_Index a2PosIndex = state->getA2PosIndex();
+
+    const Point3& a1Pos = lm.getPoint3FromPos(a1PosIndex);
+    const Point3& a2Pos = lm.getPoint3FromPos(a2PosIndex);
+
+    // create the list of new positions that are incident on
+    //  an unprinted segment
+    std::vector<Position_Index> posIndexUnprintedIncident;
+    for(auto newPosIter = lm.getPointsStartIterator(); newPosIter != lm.getPointsEndIterator(); newPosIter++){
+        // const Point3& newPos = newPosIter->first;
+        const Position_Index newPosIndex = newPosIter->second;
+
+        for(Bitset_Index possibleAdjBitsetIndex : lm.getAdjacentSegments(newPosIndex)){
+            if(state->getBitset().at(possibleAdjBitsetIndex)){
+                //it is set, do nothing
+            }else{
+                //for this newPos there is a new segment that 
+                //  that is incident and not printed
+                posIndexUnprintedIncident.push_back(newPosIndex);
+                break; // we only care if there is one, not what it is
+            }
+        }
+    }
+
     // now for the states that are going to really balloon things
     // these "work" but its a absurd amount of states
     //  something like 3*(n^2) where n = number of segments in the layer
@@ -468,55 +638,4 @@ void updateSearchStates(
             pq.push(newState);
         }
     }
-
-#ifdef DEBUG_3
-    std::cout << "Finishing state expansion, added # new states: " << newStatesAdded << std::endl;
-#endif
-    return;
-}
-
-void generateStartingPositions(const GCodeParser& gcp,
-        const LayerManager& lm, State_PQ& pq)
-{
-    unsigned int totalPositions = lm.getTotalPositions();
-    DynamicBitset startBitset(lm.getTotalPrintSegments());
-#ifdef DEBUG_3
-    std::cout << "Start Bitset is ";
-    startBitset.printBitData(std::cout);
-    std::cout << std::endl;
-#endif
-
-    //need all the starting pairs b/c what if agents are not interchangable
-    for(unsigned int i = 0; i < totalPositions; i++){
-        for(unsigned int j = 0; j < totalPositions; j++){
-            if(i == j){
-                continue;
-            }
-
-            const Point3& pi = lm.getPoint3FromPos(i);
-            const Point3& pj = lm.getPoint3FromPos(j);
-
-            if(isValidPositionPair(pi,pj)){
-#ifdef DEBUG_3
-                std::cout << "Adding new start point pair: " << pi << " " << pj << std::endl;
-#endif
-                RecomputeState newState(i, j, 0, startBitset, nullptr);
-#ifdef DEBUG_1
-                std::cout << "Pushing new state " << newState << std::endl;
-#endif
-                //std::cout << "PriorityQueue size (pre-push) : " << pq.size() << std::endl;
-                pq.push(newState);
-                //std::cout << "PriorityQueue size (post-push): " << pq.size() << std::endl;
-            }
-        }
-    }
-}
-
-void printVerbose(std::ostream& os, const RecomputeState& state, const GCodeParser& gcp, const LayerManager& lm){
-    os << "A1: " << lm.getPoint3FromPos(state.getA1PosIndex()) << "(" << state.getA1PosIndex() << "), ";
-    os << "A2: " << lm.getPoint3FromPos(state.getA2PosIndex()) << "(" << state.getA2PosIndex() << "), ";
-    os << "Depth: " << state.getDepth() << ", ";
-    os << "BitData: ";
-    state.getBitset().printBitData(os);
-    os << std::endl;
 }
