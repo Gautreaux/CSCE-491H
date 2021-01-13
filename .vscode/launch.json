@@ -5,11 +5,32 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch",
+            "name": "(gdb) Gen-Launch",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/Main.exe",
             "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:/MinGW64/bin/gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "generic-make"
+        },
+        {
+            "name": "(gdb) Launch 81191",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Main.exe",
+            "args": ["gcodeSampleSet/81191.gcode"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

@@ -10,6 +10,7 @@
 #include "GCodeParser.h"
 #include "GeometryLib/Point3.h"
 #include "LayerManager.h"
+#include "PQWrapper.h"
 #include "RecomputeState.h"
 #include "UtilLib/BiMap.h"
 #include "UtilLib/DynamicBitset.h"
@@ -25,7 +26,10 @@
 #endif
 
 // maximum number of print segments allowed in a step back 
-#define MAX_STEPBACK_ALLOWED 100
+#define MAX_STEPBACK_ALLOWED 10000
+
+//minimum acceptable efficiency of the solution
+#define EFFICIENCY_TARGET 1.8
 
 
 typedef BiMap<Point3, unsigned int> PosIndexBiMap;
@@ -69,7 +73,34 @@ public:
         return lhsCost < rhsCost;
     }
 };
-typedef std::priority_queue<RecomputeState, std::vector<RecomputeState>, PriorityCompare> State_PQ;
+
+struct Priority2Compare {
+public:
+    bool operator()(const RecomputeState& lhs, const RecomputeState& rhs){
+        if(lhs.getEfficiency() < rhs.getEfficiency()){
+            return true;
+        }else if(lhs.getEfficiency() > rhs.getEfficiency()){
+            return false;
+        }
+        if(lhs.getDepth() < rhs.getDepth()){
+            return true;
+        }else if(lhs.getDepth() > rhs.getDepth()){
+            return false;
+        }
+        return lhs < rhs;
+    }
+};
+
+
+struct Priority3Compare{
+public:
+    bool operator()(const RecomputeState& lhs, const RecomputeState& rhs){
+        return false;
+    }
+};
+
+// typedef std::priority_queue<RecomputeState, std::vector<RecomputeState>, DepthCompare> State_PQ;
+typedef PQWrapper<DepthCompare> State_PQ;
 
 
 struct StatePointerCompare{

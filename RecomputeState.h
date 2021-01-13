@@ -6,6 +6,8 @@
 #include "LayerManager.h"
 #include "UtilLib/DynamicBitset.h"
 
+#define START_STATE_EFF 2.0
+
 class RecomputeState{
 private:
     Position_Index agent1PositionIndex; // abbreviated index of agent 1 position
@@ -37,6 +39,8 @@ public:
     const DynamicBitset& getBitset(void) const {return bitset;}
 
     inline const RecomputeState* getParent(void) const {return parentState;}
+
+    inline double getEfficiency(void) const { return (getDepth() == 0 ? START_STATE_EFF : (bitset.getSetCount() / double(getDepth())));}
 };
 
 bool operator<(const RecomputeState& lhs, const RecomputeState& rhs);

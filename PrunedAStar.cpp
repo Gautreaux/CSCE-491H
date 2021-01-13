@@ -22,6 +22,7 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
 #ifdef DEBUG
     printf("Layer resolved %llu total starting position pairs\n", pq.size());
 #endif // DEBUG
+    assert(pq.size() > 0);
 
 // #ifdef DEBUG
 //     while(pq.size() > 0){
@@ -104,9 +105,11 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
                     printf("New best state: %u/%u, expanded: %d, pending: %llu\n",
                         state.getBitset().getSetCount(), lm.getTotalPrintSegments(),
                         expandedStates, pq.size());
-#endif
+                    printVerbose(std::cout, *statePtr, gcp, lm);
+                }else if(state.getBitset().getSetCount() == mostCompleteState){
+                    printf("Found another tied-best print state: %u/%u\n", state.getBitset().getSetCount(), lm.getTotalPrintSegments());
                 }
-
+#endif
                 if(visitedSet.insert(statePtr).second){
 #ifdef DEBUG_1
                     std::cout << "Expanding state " << state << std::endl;
@@ -114,6 +117,8 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
                     //new element, time to expand
                     stateGenerators[0](statePtr, gcp, lm, pq);
                     stateGenerators[1](statePtr, gcp, lm, pq);
+                    // stateGenerators[2](statePtr, gcp, lm, pq);
+                    // stateGenerators[3](statePtr, gcp, lm, pq);
                 }else{
                     //this shouldn't be possible, right?
                     // the best state has to be new;
@@ -129,7 +134,16 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
             //reporting
             if(expandedStates % LOOP_PRINT_FREQUENCY == 0){
                 printf("Total %d states expanded. ", expandedStates);
-                printf("Pending states %llu; Best state %u/%u printed.\n", pq.size(), mostCompleteState, lm.getTotalPrintSegments());
+                if(bestState != nullptr){
+                    printf("Pending states %llu (avg_eff: %f); Best state %u/%u printed, depth: %d, efficiency: %f\n", 
+                        pq.size(), pq.getAverageEff(), mostCompleteState, lm.getTotalPrintSegments(), 
+                        bestState->getDepth(), bestState->getEfficiency());
+                    std::cout << "\tPQ Pending Buckets: ";
+                    pq.printBuckets(std::cout);
+                    std::cout << std::endl;
+                }else{
+                    printf("No State yet?\n");
+                }
             }
             if(expandedStates > 100000000){
                 printf("100,000,000 states expanded without goal, terminating.\n");
@@ -137,6 +151,7 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
             }
 #endif
         }
+        break;
         if(foundGoal == nullptr){
             if(lastBest == bestState){
                 currentGenerator++;
@@ -170,7 +185,7 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
 #endif
 
 #ifdef DEBUG
-    printf("Layer successfully found a goal after %d states at depth %d.\n", expandedStates, pq.top().getDepth());
+    printf("Layer successfully found a goal after %d states at depth %d (efficiency: %f).\n", expandedStates, foundGoal->getDepth(), foundGoal->getEfficiency());
 #endif
 
     // now we need to extract the path from the states
@@ -227,6 +242,9 @@ void generateStartingPositions(const GCodeParser& gcp,
                 std::cout << "Adding new start point pair: " << pi << " " << pj << std::endl;
 #endif
                 RecomputeState newState(i, j, 0, startBitset, nullptr);
+                if(newState.getEfficiency() < EFFICIENCY_TARGET){
+                    continue;
+                }
 #ifdef DEBUG_1
                 std::cout << "Pushing new state " << newState << std::endl;
 #endif
@@ -241,7 +259,7 @@ void generateStartingPositions(const GCodeParser& gcp,
 void printVerbose(std::ostream& os, const RecomputeState& state, const GCodeParser& gcp, const LayerManager& lm){
     os << "A1: " << lm.getPoint3FromPos(state.getA1PosIndex()) << "(" << state.getA1PosIndex() << "), ";
     os << "A2: " << lm.getPoint3FromPos(state.getA2PosIndex()) << "(" << state.getA2PosIndex() << "), ";
-    os << "Depth: " << state.getDepth() << ", ";
+    os << "Depth: " << state.getDepth() << ", Efficiency: " << state.getEfficiency() << ", ";
     os << "BitData: ";
     state.getBitset().printBitData(os);
     os << std::endl;
@@ -341,6 +359,9 @@ void updateSearchStatesDualPrints(
                 newDBS.set(a1AdjBitsetIndex);
                 newDBS.set(a2AdjBitsetIndex);
                 RecomputeState newState(a1NewPosIndex, a2NewPosIndex, state->getDepth()+1, newDBS, state);
+                if(newState.getEfficiency() < EFFICIENCY_TARGET){
+                    continue;
+                }
 #ifdef DEBUG_1
                 std::cout << "Pushing new state " << newState << std::endl;
 #endif
@@ -405,6 +426,9 @@ void updateSearchStatesSinglePrintNoOp(
             DynamicBitset newDBS = state->getBitset();
             newDBS.set(a1AdjBitsetIndex);
             RecomputeState newState(a1NewPosIndex, a2PosIndex, state->getDepth()+1, newDBS, state);
+            if(newState.getEfficiency() < EFFICIENCY_TARGET){
+                continue;
+            }
 #ifdef DEBUG_1
             std::cout << "Pushing new state " << newState << std::endl;
 #endif
@@ -425,6 +449,9 @@ void updateSearchStatesSinglePrintNoOp(
             DynamicBitset newDBS = state->getBitset();
             newDBS.set(a2AdjBitsetIndex);
             RecomputeState newState(a1PosIndex, a2NewPosIndex, state->getDepth()+1, newDBS, state);
+            if(newState.getEfficiency() < EFFICIENCY_TARGET){
+                continue;
+            }
 #ifdef DEBUG_1
             std::cout << "Pushing new state " << newState << std::endl;
 #endif
@@ -516,6 +543,9 @@ void updateSearchStatesSinglePrintMove(
                 DynamicBitset newDBS = state->getBitset();
                 newDBS.set(a1AdjBitsetIndex);
                 RecomputeState newState(a1NewPosIndex, a2NewPosIndex, state->getDepth()+1, newDBS, state);
+                if(newState.getEfficiency() < EFFICIENCY_TARGET){
+                    continue;
+                }
 #ifdef DEBUG_1
                 std::cout << "Pushing new state " << newState << std::endl;
 #endif
@@ -544,6 +574,9 @@ void updateSearchStatesSinglePrintMove(
                 DynamicBitset newDBS = state->getBitset();
                 newDBS.set(a2AdjBitsetIndex);
                 RecomputeState newState(a1NewPosIndex, a2NewPosIndex, state->getDepth()+1, newDBS, state);
+                if(newState.getEfficiency() < EFFICIENCY_TARGET){
+                    continue;
+                }
 #ifdef DEBUG_1
                 std::cout << "Pushing new state " << newState << std::endl;
 #endif
@@ -606,6 +639,9 @@ void updateSearchStatesRemainingStates(
 
             if(isValidSegmentsPair(newA1Seg, newA2Seg)){
                 RecomputeState newState(a1NewPosIndex, a2NewPosIndex, state->getDepth()+1, state->getBitset(), state);
+                if(newState.getEfficiency() < EFFICIENCY_TARGET){
+                    continue;
+                }
 #ifdef DEBUG_1
                 std::cout << "Pushing new state " << newState << std::endl;
 #endif
@@ -621,6 +657,9 @@ void updateSearchStatesRemainingStates(
 
         if(isValidSegNOOP(newA1Seg, a2Pos)){
             RecomputeState newState(a1NewPosIndex, a2PosIndex, state->getDepth()+1, state->getBitset(), state);
+            if(newState.getEfficiency() < EFFICIENCY_TARGET){
+                continue;
+            }
 #ifdef DEBUG_1
             std::cout << "Pushing new state " << newState << std::endl;
 #endif
@@ -634,6 +673,9 @@ void updateSearchStatesRemainingStates(
         GCodeSegment newA2Seg(a2Pos, a2NewPos, 0);
         if(isValidSegNOOP(a1Pos, newA2Seg)){
             RecomputeState newState(a1PosIndex, a2NewPosIndex, state->getDepth()+1, state->getBitset(), state);
+            if(newState.getEfficiency() < EFFICIENCY_TARGET){
+                continue;
+            }
 #ifdef DEBUG_1
             std::cout << "Pushing new state " << newState << std::endl;
 #endif
