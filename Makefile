@@ -1,4 +1,4 @@
-CXX:=g++ # which compiler to use
+CXX:=g++-8 # which compiler to use
 CPPFLAGS=# empty default value for GCC flags, can be overriden on command line
 CPPSTD=-std=c++17# which c++ version to use
 
@@ -19,8 +19,10 @@ all : $(EXECUTABLE) tests
 force : clean $(EXECUTABLE)
 
 clean :
-	del /S *.o
-	del /S *.exe
+	rm -f *.o
+	rm -f *.exe
+	# del /S *.o
+	# del /S *.exe
 
 
 # geometry files 

@@ -107,9 +107,9 @@ void prunedAStarLayer(const GCodeParser& gcp, double layer){
                         expandedStates, pq.size());
                     printVerbose(std::cout, *statePtr, gcp, lm);
                 }else if(state.getBitset().getSetCount() == mostCompleteState){
-                    printf("Found another tied-best print state: %u/%u\n", state.getBitset().getSetCount(), lm.getTotalPrintSegments());
-                }
+                    printf("Found another tied-best print state: %u/%u\n", state.getBitset().getSetCount(), lm.getTotalPrintSegments());                
 #endif
+                }
                 if(visitedSet.insert(statePtr).second){
 #ifdef DEBUG_1
                     std::cout << "Expanding state " << state << std::endl;
