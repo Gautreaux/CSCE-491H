@@ -1,14 +1,25 @@
+#include "pch.h"
 
+#include <atomic>
+#include <chrono>
 #include <iostream>
+#include <thread>
 
 #include "GCodeParser.h"
 #include "PrunedAStar.h"
 #include "UtilLib/FileUtil.h"
+#include "UtilLib/ThreadsafeIntGen.h"
 
 using std::cout;
 using std::endl;
 
 #define DEFAULT_FILEPATH "TestingFiles/simpleRecomputable.gcode"
+
+#ifndef DEFAULT_THREAD_COUNT
+#define DEFAULT_THREAD_COUNT 8
+#endif
+
+#define REPORT_INTERVAL_SEC 5
 
 struct ParsedArgs{
     bool help;
@@ -65,6 +76,78 @@ void printHelp(void){
 
 void printError(void){
     printf("An error occurred in argument processing, terminating\n");
+}
+
+struct CommonThreadParameters{
+    ThreadsafeIntGen *const t;
+    const std::vector<std::string> *const fileNames;
+    const char* const rootName;
+
+    std::atomic<unsigned int> totalProcessed;
+    std::atomic<unsigned int> totalValid;
+    std::atomic<unsigned long long> totalBytesValid;
+    std::atomic<unsigned int> threadsRunning;
+    std::atomic<bool> running;
+
+    CommonThreadParameters(ThreadsafeIntGen* t, 
+        std::vector<std::string> *const fileNames,
+        const char* const rootName) : t(t), fileNames(fileNames), rootName(rootName),
+        totalProcessed(0), totalValid(0), totalBytesValid(0), threadsRunning(0), running(true)
+    {}
+};
+
+void threadFunction(const unsigned int threadID, CommonThreadParameters *const CTP){
+    CTP->threadsRunning.fetch_add(1);
+    unsigned int totalProcessed = 0;
+    int fileIndex;
+    while(((fileIndex = CTP->t->next()) < CTP->fileNames->size())){
+        totalProcessed += 1;
+
+        std::string fullPath(CTP->rootName);
+        fullPath += '/';
+        fullPath += CTP->fileNames->at(fileIndex);
+
+        GCodeParser gcp(fullPath);
+
+        if(gcp){
+            CTP->totalValid.fetch_add(1);
+            CTP->totalBytesValid.fetch_add(gcp.getFileSize());
+        }
+
+        CTP->totalProcessed.fetch_add(1);
+    }
+
+    printf("Thread %u processed %u files\n", threadID, totalProcessed);
+    CTP->threadsRunning.fetch_sub(1);
+    if(CTP->threadsRunning.load() == 0){
+        //technically could be run multiple times
+        CTP->running.store(false);
+    }
+}
+
+void reportingFunction(const CommonThreadParameters *const CTP){
+    unsigned int approx_sec = 0;
+    unsigned int count =  CTP->fileNames->size();
+    unsigned long long lastBytes = 0;
+    
+    while(CTP->running.load() > 0){
+        unsigned int total = CTP->totalProcessed.load();    
+        unsigned long long bytes = CTP->totalBytesValid.load();
+        
+        unsigned long long elapsedBytes = (bytes - lastBytes);
+        double MBPS = ((double)(elapsedBytes * B_TO_MB))/REPORT_INTERVAL_SEC;
+
+        printf("[%u], Running: %u, Processed %u/%u (%.2f%%), Valid %u, Bytes (valid) %.0fMB (%.2fMB/s)\n", 
+            approx_sec, CTP->threadsRunning.load(), total, count, (((double)(total*100))/count),
+            CTP->totalValid.load(), bytes * B_TO_MB, MBPS
+        );
+
+        //updating fields
+        lastBytes = bytes;
+
+        std::this_thread::sleep_for(std::chrono::seconds(REPORT_INTERVAL_SEC));
+        approx_sec += REPORT_INTERVAL_SEC;
+    }
 }
 
 int main(int argc, char ** argv){
@@ -126,11 +209,58 @@ int main(int argc, char ** argv){
         std::vector<std::string> files;
 
         auto totalFiles = getAllFiles(p.path_str.c_str(), files, FileFilterExtension(".gcode"));
+        assert(files.size() == totalFiles);
 
         //print all the files
         // for(auto s : files){
         //     printf("%s/%s\n", p.path_str.c_str(), s.c_str());
         // }
+
         printf("Directory found %u total files\n", totalFiles);
+
+        //number of threads to spawn
+        //  should become a command line parameter
+        unsigned int numThreads = DEFAULT_THREAD_COUNT;
+#ifdef FORCE_SINGLE_THREAD
+        numThreads = 1;
+#endif
+        if(numThreads > 500){
+            printf("NumThreads seems extremely high: %u\n", numThreads);
+            exit(2);
+        }
+        else if(numThreads == 1)
+        {
+            //call function directly
+            for(unsigned int i = 0; i < totalFiles; i++){
+                std::string fullPath(p.path_str);
+                fullPath += '/';
+                fullPath += files[i];
+
+                GCodeParser gcp(fullPath);
+
+                if(i % 5 == 0){
+                    printf("Processing file %u\n", i);
+                }
+            }
+        }else{
+            // generator for which files to process
+            ThreadsafeIntGen gen;
+
+            //create the thread parameters
+            CommonThreadParameters CTP(&gen, &files, p.path_str.c_str());
+
+            std::vector<std::thread> threads;
+            threads.push_back(std::thread(reportingFunction, &CTP));
+            for(unsigned int i = 0; i < numThreads; i++){
+                threads.push_back(std::thread(threadFunction, i, &CTP));
+            }
+            printf("All threads created\n");
+            for(auto& thread : threads){
+                //will block on the reporting thread before the worker threads
+                thread.join();
+            }
+
+            printf("All threads joined, %u files (%llu bytes) processed\n", CTP.totalProcessed.load(), CTP.totalBytesValid.load());
+        }
     }
 }

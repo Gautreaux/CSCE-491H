@@ -18,6 +18,8 @@
 #define DOUBLE_LEQ(a,b) (!DOUBLE_GT(a,b))
 #define DOUBLE_GEQ(a,b) (!DOUBLE_LT(a,b))
 
+#define MB_TO_B (1024*1024)
+#define B_TO_MB (1.0/(MB_TO_B))
 
 // these file flags control several print statements and checks in all the files
 //the higher the number, the more printing that occurs

@@ -11,16 +11,6 @@
 typedef std::vector<GCodeSegment>::const_iterator SegmentIterator;
 typedef std::vector<double>::const_iterator LayerIterator;
 
-// TODO - is this now completely to remove
-// class GCodeParser;
-//
-// struct for sotring the information about a single layer
-// struct GCodeLayer{
-//     GCodeParser* parser;
-//     unsigned int startIndex;
-//     unsigned int afterEndIndex;
-// };
-
 class GCodeParser{
 private:
     // required subclasses
@@ -30,6 +20,7 @@ private:
 
     //data members
     bool valid; //true iff the parsing completed successfully
+    unsigned int fileSize;
     std::vector<GCodeSegment> segmentsList; 
     std::vector<double> zLayers; // set of valid zLayers in the vector
 
@@ -72,6 +63,8 @@ public:
     //return the validity of the file
     bool inline isValid(void) const {return valid;}
     operator bool() const {return isValid();}
+
+    inline unsigned int getFileSize(void) const {return fileSize;}
 
     //iterators and access
     const GCodeSegment& at(unsigned int i) const;

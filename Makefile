@@ -8,8 +8,8 @@ CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -o $@ $< *.o
 
 EXECUTABLE=Main.exe
 
-$(EXECUTABLE) : Main.cpp FileUtil.o GCodeParser.o PrunedAStar.o
-	$(CC_COMPILE_LINK_EXE_AUTO)
+$(EXECUTABLE) : Main.cpp FileUtil.o GCodeParser.o PrunedAStar.o ThreadsafeIntGen.o
+	$(CC_COMPILE_LINK_EXE_AUTO) -lpthread
 
 # declaring a phony forces the top level to always rebuild
 .PHONY: $(EXECUTABLE) tests
@@ -71,6 +71,9 @@ NonReallocVector.o : UtilLib/NonReallocVector.cpp UtilLib/NonReallocVector.h pch
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 FileUtil.o : UtilLib/FileUtil.cpp UtilLib/FileUtil.h pch.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+ThreadsafeIntGen.o : UtilLib/ThreadsafeIntGen.cpp UtilLib/ThreadsafeIntGen.h pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # testing files

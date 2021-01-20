@@ -216,6 +216,13 @@ bool GCodeParser::parseFile(const std::string filePath){
         
     }
 
+    //seems like this shouldn't be necessary
+    infile.clear();
+    infile.seekg(0, std::ios::beg);
+    auto b = infile.tellg();
+    infile.seekg(0, std::ios::end);
+    fileSize = infile.tellg() - b;
+
     //ifstream destructor should call this automatically?
     infile.close();
 
