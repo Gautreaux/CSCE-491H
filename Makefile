@@ -8,7 +8,7 @@ CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -o $@ $< *.o
 
 EXECUTABLE=Main.exe
 
-$(EXECUTABLE) : Main.cpp GCodeParser.o PrunedAStar.o
+$(EXECUTABLE) : Main.cpp FileUtil.o GCodeParser.o PrunedAStar.o
 	$(CC_COMPILE_LINK_EXE_AUTO)
 
 # declaring a phony forces the top level to always rebuild
@@ -70,6 +70,8 @@ BiMap.o : UtilLib/BiMap.cpp UtilLib/BiMap.h pch.o
 NonReallocVector.o : UtilLib/NonReallocVector.cpp UtilLib/NonReallocVector.h pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
+FileUtil.o : UtilLib/FileUtil.cpp UtilLib/FileUtil.h pch.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # testing files
 test : tests

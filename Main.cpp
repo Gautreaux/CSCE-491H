@@ -1,9 +1,9 @@
 
-#include <filesystem>
 #include <iostream>
 
 #include "GCodeParser.h"
 #include "PrunedAStar.h"
+#include "UtilLib/FileUtil.h"
 
 using std::cout;
 using std::endl;
@@ -119,7 +119,18 @@ int main(int argc, char ** argv){
 
         prunedAStar(gcp);
         std::cout << "Normal Exit occurred" << std::endl;
-    }else{
-        //process a batch file
+    }
+    else
+    {
+        //process a directory
+        std::vector<std::string> files;
+
+        auto totalFiles = getAllFiles(p.path_str.c_str(), files, FileFilterExtension(".gcode"));
+
+        //print all the files
+        // for(auto s : files){
+        //     printf("%s/%s\n", p.path_str.c_str(), s.c_str());
+        // }
+        printf("Directory found %u total files\n", totalFiles);
     }
 }
