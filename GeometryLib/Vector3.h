@@ -19,6 +19,12 @@ public:
     Vector3 inline reverse(void) const{
         return (*(this)) * -1;
     }
+
+    //return a vector that is this vector scaled to magnitude mag
+    Vector3 inline scaleVector(double mag) const {
+        double scaleFactor = mag/getMagnitude();
+        return Vector3(x*scaleFactor, y*scaleFactor, z*scaleFactor, false);
+    }
 };
 
 

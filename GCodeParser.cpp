@@ -6,19 +6,34 @@
 #include "GCodeParser.h"
 #include "pch.h"
 
-GCodeParser::GCodeParser(const std::string filePath){
+GCodeParser::GCodeParser(const std::string filePath) : errorFlags(0), fileSize(0) {
     // setup the object
 
     // do the file parsing
-    valid = parseFile(filePath);
+    bool valid = parseFile(filePath);
 #ifdef DEBUG
     printf("Parsing %s for file %s\n", valid ? "successful" : "failed", filePath.c_str());
 #endif
-    if(valid == false){return;}
+    if(valid == false){
+        setErrorBit(ErrorTypes::PARSE_ERROR);
+        return;
+    }
 
     // simple checks
     //  this could be more efficient, but whatever
-    valid = isMonotonicIncreasingZ() && isZSlicedPrint() && isContinuousPrint();
+    //  the checks do a decent amount of duplicate work
+    if(isMonotonicIncreasingZ() == false){
+        setErrorBit(ErrorTypes::MONO_ERROR);
+        valid = false;
+    }
+    if(isZSlicedPrint() == false){
+        setErrorBit(ErrorTypes::Z_ERROR);
+        valid = false;
+    }
+    if(isContinuousPrint() == false){
+        setErrorBit(ErrorTypes::CONTINUOUS_ERROR);
+        valid = false;
+    }
 #ifdef DEBUG
     printf("Post-Parse Checks: %s\n", valid ? "Passing" : "Failed");
 #endif      
@@ -26,6 +41,7 @@ GCodeParser::GCodeParser(const std::string filePath){
 #ifdef DEBUG
         // not the most efficient, but shouldn't be run so thats cool
         //  also, the compiler shouldn't recognize/cache results?
+        // TODO - rewrite to use the error bits and problem is solved
         printf("\tMonotonic increasing z: %s\n", isMonotonicIncreasingZ() ? "Passing" : "Failed");
         printf("\tZ-Sliced Print: %s\n", isZSlicedPrint() ? "Passing" : "Failed");
         printf("\tContinuous Print: %s\n", isContinuousPrint() ? "Passing" : "Failed");
@@ -35,7 +51,7 @@ GCodeParser::GCodeParser(const std::string filePath){
 
 
     // build the zLayers
-    //  assumes that isMonotonicIncreasingZ() is true
+    assert(readErrorBit(ErrorTypes::Z_ERROR) == false);
     zLayers.empty();
     zLayers.push_back(segmentsList[0].getStartPoint().getZ());
     for(auto segment : segmentsList){
@@ -47,6 +63,44 @@ GCodeParser::GCodeParser(const std::string filePath){
         if(t > zLayers.back()){
             zLayers.push_back(t);
         }
+    }
+
+    //now we want to split the print segments 
+    originalSegmentsList = std::move(segmentsList);
+    for(auto& originalSeg : originalSegmentsList){
+        if(originalSeg.isPrintSegment() == false){
+            segmentsList.push_back(originalSeg);
+            continue;
+        }
+        if(originalSeg.length() <= SPLIT_TARGET_MM){
+            //this segment is already short enough, so skip it
+            segmentsList.push_back(originalSeg);
+            continue;
+        }
+        
+        double origLen = originalSeg.length();
+        //check, should be guaranteed above
+        assert(originalSeg.isZParallel());
+
+        const Vector3 stepAmount = originalSeg.getSlope().scaleVector(SPLIT_TARGET_MM);
+        const Point3& startPoint = originalSeg.getStartPoint();
+        Point3 lastPoint = startPoint;
+        double printPerUnit = originalSeg.getPrintAmount() / origLen;
+        
+        do{
+            Point3 newPoint = lastPoint + stepAmount;
+            if(getPointDistance(startPoint, newPoint) > origLen){
+                //last segment
+                double thisLen = getPointDistance(lastPoint, originalSeg.getEndPoint());
+                segmentsList.push_back(GCodeSegment(lastPoint, originalSeg.getEndPoint(), thisLen*printPerUnit));
+                break;
+            }else{
+                //partial segment
+                assert(DOUBLE_EQUAL(getPointDistance(lastPoint, newPoint), SPLIT_TARGET_MM));
+                segmentsList.push_back(GCodeSegment(lastPoint, newPoint, printPerUnit*SPLIT_TARGET_MM));
+                lastPoint = newPoint;
+            }
+        }while(true);
     }
 }
 
@@ -282,8 +336,31 @@ bool GCodeParser::isContinuousPrint(void) const {
     return true;
 }
 
+unsigned char GCodeParser::convertParseValid(GCodeParser::ErrorTypes p) const {
+    switch (p)
+    {
+    case ErrorTypes::PARSE_ERROR:
+        return 0;
+    case ErrorTypes::MONO_ERROR:
+        return 1;
+    case ErrorTypes::Z_ERROR:
+        return 2;
+    case ErrorTypes::CONTINUOUS_ERROR:
+        return 3;
+    }
+    throw std::exception();
+};
+
 const GCodeSegment& GCodeParser::at(unsigned int i) const{
     if(i < 0 || i > numberSegments()){
+        throw std::out_of_range("");
+    }
+
+    return segmentsList[i];
+}
+
+const GCodeSegment& GCodeParser::orig_at(unsigned int i) const{
+    if(i < 0 || i > numberOrigSegments()){
         throw std::out_of_range("");
     }
 
@@ -293,6 +370,7 @@ const GCodeSegment& GCodeParser::at(unsigned int i) const{
 unsigned int GCodeParser::getLayerStartIndex(double zLayerTarget) const {
     //TODO - could be a binary search or something more efficient, because
     //requires segments to be in monotonic increasing order
+    assert(readErrorBit(ErrorTypes::MONO_ERROR) == false);
 
     for(unsigned int i = 0; i < segmentsList.size(); i++){
         const GCodeSegment& gcs = segmentsList.at(i);
@@ -313,9 +391,51 @@ unsigned int GCodeParser::getLayerStartIndex(double zLayerTarget) const {
 unsigned int GCodeParser::getLayerEndIndex(double zLayerTarget) const {
     //TODO - could be a binary search or something more efficient, because
     //requires segments to be in monotonic increasing order
+    assert(readErrorBit(ErrorTypes::MONO_ERROR) == false);
 
     for(int i = segmentsList.size()-1; i >= 0; i--){
         const GCodeSegment& gcs = segmentsList.at(i);
+        if(gcs.isZParallel()){
+            auto z = gcs.getStartPoint().getZ();
+            if(z == zLayerTarget){
+                return i;
+            }else if(z < zLayerTarget){
+                break;
+            }
+        }
+    }
+
+    throw std::runtime_error("Could not match provided zLayer to one in file");
+}
+
+unsigned int GCodeParser::getLayerOrigStartIndex(double zLayerTarget) const {
+    //TODO - could be a binary search or something more efficient, because
+    //requires segments to be in monotonic increasing order
+    assert(readErrorBit(ErrorTypes::MONO_ERROR) == false);
+
+    for(unsigned int i = 0; i < originalSegmentsList.size(); i++){
+        const GCodeSegment& gcs = originalSegmentsList.at(i);
+        if(gcs.isZParallel()){
+            auto z = gcs.getStartPoint().getZ();
+            if(z == zLayerTarget){
+                return i;
+            }else if(z > zLayerTarget){
+                break;
+            }
+        }
+    }
+
+    throw std::runtime_error("Could not match provided zLayer to one in file");
+}
+
+
+unsigned int GCodeParser::getLayerOrigEndIndex(double zLayerTarget) const {
+    //TODO - could be a binary search or something more efficient, because
+    //requires segments to be in monotonic increasing order
+    assert(readErrorBit(ErrorTypes::MONO_ERROR) == false);
+
+    for(int i = originalSegmentsList.size()-1; i >= 0; i--){
+        const GCodeSegment& gcs = originalSegmentsList.at(i);
         if(gcs.isZParallel()){
             auto z = gcs.getStartPoint().getZ();
             if(z == zLayerTarget){

@@ -20,7 +20,7 @@ public:
     inline const Slope& getSlope(void) const {return slope;}
 
     // return true iff segment is parallel to z = 0
-    bool inline isZParallel(void) const {return slope.getZ() == 0;}
+    bool inline isZParallel(void) const {return DOUBLE_EQUAL(slope.getZ(), 0);}
 
     //line comparison functions
     bool isParallel(const Line& other) const;

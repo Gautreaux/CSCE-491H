@@ -111,7 +111,7 @@ struct StatePointerCompare{
 
 typedef std::set<RecomputeState*, StatePointerCompare> State_Set;
 
-#define COLLISION_TOLERANCE 25
+#define COLLISION_TOLERANCE SPLIT_TARGET_MM
 
 // do a pruned AStar Search on a single layer
 // return type TBD, but probably a pair of positions where the agents ended up

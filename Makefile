@@ -4,7 +4,7 @@ CPPSTD=-std=c++17# which c++ version to use
 
 CPP_COMP_COM=$(CXX) $(CPPFLAGS) $(CPPSTD)
 CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c -Wall -o $@ $<
-CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -o $@ $< *.o
+CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -Wall -o $@ $< *.o
 
 EXECUTABLE=Main.exe
 

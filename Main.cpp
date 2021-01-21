@@ -100,7 +100,7 @@ void threadFunction(const unsigned int threadID, CommonThreadParameters *const C
     CTP->threadsRunning.fetch_add(1);
     unsigned int totalProcessed = 0;
     int fileIndex;
-    while(((fileIndex = CTP->t->next()) < CTP->fileNames->size())){
+    while(((fileIndex = CTP->t->next()) < ((int)CTP->fileNames->size()))){
         totalProcessed += 1;
 
         std::string fullPath(CTP->rootName);

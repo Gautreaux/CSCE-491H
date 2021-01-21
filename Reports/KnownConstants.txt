@@ -1,0 +1,11 @@
+All Files (R:/)
+    13,938 files
+    132,998,912,917 bytes
+
+Expected All Files:
+    30,515 files
+    ~230,000,000,000 bytes
+
+Sample Set (D:/12dPrinter/research-code/gcodeSampleSet)
+    20 files
+    29,724,484 bytes
