@@ -136,11 +136,13 @@ public:
 
 void dumpGCP(std::ostream& o, const GCodeParser& gcp){
     o << '\t' << gcp.getFileSize() << std::endl;
-    o << '\t' << (gcp.isValid() ? "VALID" : "INV") << " " << PRINT_BOOL(gcp.parseError()) << " " << PRINT_BOOL(gcp.monoError()) << " " << PRINT_BOOL(gcp.zError()) << " " << PRINT_BOOL(gcp.continuousError()) << std::endl;
+    o << '\t' << (gcp.isValid() ? "VALID" : "INV");
     if(!gcp.isValid()){
-        o << std::endl;
+        o << " " << PRINT_BOOL(gcp.parseError()) << " " << PRINT_BOOL(gcp.monoError()) << " " << PRINT_BOOL(gcp.zError()) << " " << PRINT_BOOL(gcp.continuousError()) << " " << PRINT_BOOL(gcp.tooLargeError()) << std::endl;
+        o << std::endl; //extra newline to separate records
         return;
     }
+    o << std::endl; // ends the valid invalid line
     o << '\t' << gcp.numberOrigSegments() << " " << gcp.numberSegments() << " " << gcp.numberZLayers() << std::endl;
     
     const std::vector<double>& layersRef = gcp.getLayerVecRef();
@@ -213,6 +215,7 @@ void threadFunction(const unsigned int threadID, CommonThreadParameters *const C
         }
 
         CTP->totalProcessed.fetch_add(1);
+        ofs.flush();
     }
 
     ofs.close();

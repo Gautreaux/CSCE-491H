@@ -115,6 +115,21 @@ bool GCodeParser::parseFile(const std::string filePath){
 #endif
     }
 
+    //seems like this shouldn't be necessary
+    infile.clear();
+    infile.seekg(0, std::ios::beg);
+    auto b = infile.tellg();
+    infile.seekg(0, std::ios::end);
+    fileSize = infile.tellg() - b;
+
+    if(fileSize > (MAX_FILE_SIZE_MB * MB_TO_B)){
+        setErrorBit(ErrorTypes::FILE_TOO_LARGE);
+        return false;
+    }
+
+    //return to beginning
+    infile.seekg(0, std::ios::beg);
+
     //do the meat of the processing
     std::string line;
     std::vector<std::string> lineTokens;
@@ -268,13 +283,6 @@ bool GCodeParser::parseFile(const std::string filePath){
         
     }
 
-    //seems like this shouldn't be necessary
-    infile.clear();
-    infile.seekg(0, std::ios::beg);
-    auto b = infile.tellg();
-    infile.seekg(0, std::ios::end);
-    fileSize = infile.tellg() - b;
-
     //ifstream destructor should call this automatically?
     infile.close();
 
@@ -345,6 +353,8 @@ unsigned char GCodeParser::convertParseValid(GCodeParser::ErrorTypes p) const {
         return 2;
     case ErrorTypes::CONTINUOUS_ERROR:
         return 3;
+    case ErrorTypes::FILE_TOO_LARGE:
+        return 4;
     }
     throw std::exception();
 };

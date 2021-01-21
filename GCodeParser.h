@@ -11,6 +11,7 @@
 typedef std::vector<GCodeSegment>::const_iterator SegmentIterator;
 typedef std::vector<double>::const_iterator LayerIterator;
 
+#define MAX_FILE_SIZE_MB 32
 #define SPLIT_TARGET_MM 25
 
 class GCodeParser{
@@ -18,7 +19,7 @@ private:
     // required subclasses
     enum class GCodeUnits {INCHES, MILLIMETERS};
     enum class GCodePositioningType {ABSOLUTE, RELATIVE};
-    enum class ErrorTypes {PARSE_ERROR, MONO_ERROR, Z_ERROR, CONTINUOUS_ERROR};
+    enum class ErrorTypes {PARSE_ERROR, MONO_ERROR, Z_ERROR, CONTINUOUS_ERROR, FILE_TOO_LARGE};
     struct SplitToken{char letter; double number;};
 
     //data members
@@ -83,6 +84,7 @@ public:
     bool inline monoError(void) const {return readErrorBit(ErrorTypes::MONO_ERROR);}
     bool inline zError(void) const {return readErrorBit(ErrorTypes::Z_ERROR);}
     bool inline continuousError(void) const {return readErrorBit(ErrorTypes::CONTINUOUS_ERROR);}
+    bool inline tooLargeError(void) const {return readErrorBit(ErrorTypes::FILE_TOO_LARGE);}
     operator bool() const {return isValid();}
 
     inline unsigned int getFileSize(void) const {return fileSize;}

@@ -27,6 +27,9 @@ clean :
 release : clean
 	make CPPFLAGS=-Ofast
 
+debug : clean
+	make CPPFLAGS=-g
+
 # geometry files 
 GCodeParser.o : GCodeParser.cpp GCodeParser.h GCodeSegment.o Point3.o pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
