@@ -6,7 +6,7 @@
         {
             "label": "generic-make",
             "type": "shell",
-            "command": "make CPPFLAGS=\"-g -DDEBUG\" force"
+            "command": "make CPPFLAGS=\"-g -DDEBUG -DFORCE_SINGLE_THREAD\" force"
         }
     ]
 }

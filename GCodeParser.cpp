@@ -55,13 +55,11 @@ GCodeParser::GCodeParser(const std::string filePath) : errorFlags(0), fileSize(0
     zLayers.empty();
     zLayers.push_back(segmentsList[0].getStartPoint().getZ());
     for(auto segment : segmentsList){
-        auto t = segment.getStartPoint().getZ();
-        if(t > zLayers.back()){
-            zLayers.push_back(t);
-        }
-        t = segment.getEndPoint().getZ();
-        if(t > zLayers.back()){
-            zLayers.push_back(t);
+        if(segment.isPrintSegment()){
+            assert(segment.isZParallel()); // implied by Z_ERROR bit
+            if(zLayers.size() == 0 || (segment.getStartPoint().getZ() > zLayers.back())){ 
+                zLayers.push_back(segment.getStartPoint().getZ());
+            }
         }
     }
 
@@ -375,8 +373,8 @@ unsigned int GCodeParser::getLayerStartIndex(double zLayerTarget) const {
     for(unsigned int i = 0; i < segmentsList.size(); i++){
         const GCodeSegment& gcs = segmentsList.at(i);
         if(gcs.isZParallel()){
-            auto z = gcs.getStartPoint().getZ();
-            if(z == zLayerTarget){
+            double z = gcs.getStartPoint().getZ();
+            if(DOUBLE_EQUAL(z, zLayerTarget)){
                 return i;
             }else if(z > zLayerTarget){
                 break;

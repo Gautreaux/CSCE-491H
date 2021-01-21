@@ -24,6 +24,8 @@ clean :
 	# del /S *.o
 	# del /S *.exe
 
+release : clean
+	make CPPFLAGS=-Ofast
 
 # geometry files 
 GCodeParser.o : GCodeParser.cpp GCodeParser.h GCodeSegment.o Point3.o pch.o

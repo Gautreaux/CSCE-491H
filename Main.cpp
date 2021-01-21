@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <thread>
 
@@ -19,7 +20,7 @@ using std::endl;
 #define DEFAULT_THREAD_COUNT 8
 #endif
 
-#define REPORT_INTERVAL_SEC 5
+#define REPORT_INTERVAL_SEC 2
 
 struct ParsedArgs{
     bool help;
@@ -82,6 +83,7 @@ struct CommonThreadParameters{
     ThreadsafeIntGen *const t;
     const std::vector<std::string> *const fileNames;
     const char* const rootName;
+    const std::string outFileRoot;
 
     std::atomic<unsigned int> totalProcessed;
     std::atomic<unsigned int> totalValid;
@@ -91,15 +93,86 @@ struct CommonThreadParameters{
 
     CommonThreadParameters(ThreadsafeIntGen* t, 
         std::vector<std::string> *const fileNames,
-        const char* const rootName) : t(t), fileNames(fileNames), rootName(rootName),
+        const char* const rootName, const std::string outFileRoot = "") : 
+        t(t), fileNames(fileNames), rootName(rootName), outFileRoot(outFileRoot),
         totalProcessed(0), totalValid(0), totalBytesValid(0), threadsRunning(0), running(true)
     {}
 };
+
+#define PRINT_BOOL(b) (b ? '1' : '0')
+
+class LayerSummer{
+private:
+    unsigned int numPrint;
+    unsigned int numNonPrint;
+    unsigned int numSegments;
+    double printDist;
+    double nonPrintDist;
+public:
+    LayerSummer() : numPrint(0), numNonPrint(0), numSegments(0),
+        printDist(0), nonPrintDist(0)
+    {}
+
+    void operator()(const GCodeSegment& seg){
+        numSegments += 1;
+        if(seg.isPrintSegment()){
+            numPrint += 1;
+            printDist += seg.length();
+        }else{
+            numNonPrint += 1;
+            nonPrintDist += seg.length();
+        }
+    }
+
+    void dump(std::ostream& o, std::string prefix = "\t\t"){
+        o << prefix << numPrint << " ";
+        o << numNonPrint << " ";
+        o << printDist << " ";
+        o << nonPrintDist;
+    }
+
+    inline unsigned int getNumSegments(void) const {return numSegments;}
+};
+
+void dumpGCP(std::ostream& o, const GCodeParser& gcp){
+    o << '\t' << gcp.getFileSize() << std::endl;
+    o << '\t' << (gcp.isValid() ? "VALID" : "INV") << " " << PRINT_BOOL(gcp.parseError()) << " " << PRINT_BOOL(gcp.monoError()) << " " << PRINT_BOOL(gcp.zError()) << " " << PRINT_BOOL(gcp.continuousError()) << std::endl;
+    if(!gcp.isValid()){
+        o << std::endl;
+        return;
+    }
+    o << '\t' << gcp.numberOrigSegments() << " " << gcp.numberSegments() << " " << gcp.numberZLayers() << std::endl;
+    for(auto layerIter = gcp.layers_begin(); layerIter != gcp.layers_end(); layerIter++){
+        double layerValue = *layerIter;
+
+        LayerSummer seg;
+        iterateGCPLayer(gcp, layerValue, seg);
+
+        LayerSummer orig;
+        iterateOrigGCPLayer(gcp, layerValue, orig);
+
+
+        o << '\t' << layerValue << " ";
+        o << seg.getNumSegments() << " ";
+        o << orig.getNumSegments() << std::endl;
+
+        seg.dump(o);
+        o << std::endl;
+        orig.dump(o);
+        o << std::endl;
+
+    }
+    o << std::endl;
+}
 
 void threadFunction(const unsigned int threadID, CommonThreadParameters *const CTP){
     CTP->threadsRunning.fetch_add(1);
     unsigned int totalProcessed = 0;
     int fileIndex;
+
+    std::string outPath = CTP->outFileRoot + std::to_string(threadID) + ".repOut";
+    std::ofstream ofs(outPath.c_str());
+
     while(((fileIndex = CTP->t->next()) < ((int)CTP->fileNames->size()))){
         totalProcessed += 1;
 
@@ -107,11 +180,18 @@ void threadFunction(const unsigned int threadID, CommonThreadParameters *const C
         fullPath += '/';
         fullPath += CTP->fileNames->at(fileIndex);
 
-        GCodeParser gcp(fullPath);
+        ofs << fullPath << std::endl;
+        try{
+            GCodeParser gcp(fullPath);
 
-        if(gcp){
-            CTP->totalValid.fetch_add(1);
-            CTP->totalBytesValid.fetch_add(gcp.getFileSize());
+            dumpGCP(ofs, gcp);
+
+            if(gcp){
+                CTP->totalValid.fetch_add(1);
+                CTP->totalBytesValid.fetch_add(gcp.getFileSize());
+            }
+        } catch (...){
+            ofs << "\tEXCEPTION" << std::endl;
         }
 
         CTP->totalProcessed.fetch_add(1);
@@ -228,39 +308,24 @@ int main(int argc, char ** argv){
             printf("NumThreads seems extremely high: %u\n", numThreads);
             exit(2);
         }
-        else if(numThreads == 1)
-        {
-            //call function directly
-            for(unsigned int i = 0; i < totalFiles; i++){
-                std::string fullPath(p.path_str);
-                fullPath += '/';
-                fullPath += files[i];
 
-                GCodeParser gcp(fullPath);
+        // generator for which files to process
+        ThreadsafeIntGen gen;
 
-                if(i % 5 == 0){
-                    printf("Processing file %u\n", i);
-                }
-            }
-        }else{
-            // generator for which files to process
-            ThreadsafeIntGen gen;
+        //create the thread parameters
+        CommonThreadParameters CTP(&gen, &files, p.path_str.c_str(), "Reports/GenericReport");
 
-            //create the thread parameters
-            CommonThreadParameters CTP(&gen, &files, p.path_str.c_str());
-
-            std::vector<std::thread> threads;
-            threads.push_back(std::thread(reportingFunction, &CTP));
-            for(unsigned int i = 0; i < numThreads; i++){
-                threads.push_back(std::thread(threadFunction, i, &CTP));
-            }
-            printf("All threads created\n");
-            for(auto& thread : threads){
-                //will block on the reporting thread before the worker threads
-                thread.join();
-            }
-
-            printf("All threads joined, %u files (%llu bytes) processed\n", CTP.totalProcessed.load(), CTP.totalBytesValid.load());
+        std::vector<std::thread> threads;
+        threads.push_back(std::thread(reportingFunction, &CTP));
+        for(unsigned int i = 0; i < numThreads; i++){
+            threads.push_back(std::thread(threadFunction, i, &CTP));
         }
+        printf("All threads created\n");
+        for(auto& thread : threads){
+            //will block on the reporting thread before the worker threads
+            thread.join();
+        }
+
+        printf("All threads joined, %u files (%llu bytes) processed\n", CTP.totalProcessed.load(), CTP.totalBytesValid.load());
     }
 }

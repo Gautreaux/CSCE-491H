@@ -26,7 +26,7 @@ private:
     unsigned int fileSize;
     std::vector<GCodeSegment> originalSegmentsList;
     std::vector<GCodeSegment> segmentsList; 
-    std::vector<double> zLayers; // set of valid zLayers in the vector
+    std::vector<double> zLayers; // set of zLayers with print elements
 
     //split the token into its various components 
     SplitToken inline splitToken(const std::string token);
@@ -71,12 +71,18 @@ public:
     GCodeParser(const std::string filePath);
 
     //get the number of segments that were parsed out
-    unsigned int numberOrigSegments(void) const {return originalSegmentsList.size();}
-    unsigned int numberSegments(void) const {return segmentsList.size();}
-    unsigned int numberZLayers(void) const {return zLayers.size();}
+    inline unsigned int numberOrigSegments(void) const {return originalSegmentsList.size();}
+    inline unsigned int numberSegments(void) const {return segmentsList.size();}
+    inline unsigned int numberZLayers(void) const {return zLayers.size();}
+    inline unsigned int numberSegmentsInLayer(const double d) const {return (getLayerEndIndex(d) - getLayerStartIndex(d) + 1);} //+1 because inclusive
+    inline unsigned int numberOrigSegmentsInLayer(const double d) const {return (getLayerOrigEndIndex(d) - getLayerOrigStartIndex(d) + 1);} //+1 because inclusive
 
     //return the validity of the file
     bool inline isValid(void) const {return errorFlags == 0;}
+    bool inline parseError(void) const {return readErrorBit(ErrorTypes::PARSE_ERROR);}
+    bool inline monoError(void) const {return readErrorBit(ErrorTypes::MONO_ERROR);}
+    bool inline zError(void) const {return readErrorBit(ErrorTypes::Z_ERROR);}
+    bool inline continuousError(void) const {return readErrorBit(ErrorTypes::CONTINUOUS_ERROR);}
     operator bool() const {return isValid();}
 
     inline unsigned int getFileSize(void) const {return fileSize;}
@@ -98,3 +104,17 @@ public:
     unsigned int getLayerOrigStartIndex(double zLayerTarget) const;
     unsigned int getLayerOrigEndIndex(double zLayerTarger) const;
 };
+
+template <class Functor>
+void iterateGCPLayer(const GCodeParser& gcp, double zLayer, Functor& functor){
+    for(unsigned int i = gcp.getLayerStartIndex(zLayer); i <= gcp.getLayerEndIndex(zLayer); i++){
+        functor(gcp.at(i));
+    }
+}
+
+template <class Functor>
+void iterateOrigGCPLayer(const GCodeParser& gcp, double zLayer, Functor& functor){
+    for(unsigned int i = gcp.getLayerOrigStartIndex(zLayer); i <= gcp.getLayerOrigEndIndex(zLayer); i++){
+        functor(gcp.at(i));
+    }
+}
