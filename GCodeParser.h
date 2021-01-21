@@ -97,12 +97,15 @@ public:
     inline LayerIterator layers_begin() const {return zLayers.begin();}
     inline LayerIterator layers_end() const {return zLayers.end();}
 
-    // get the start/end of a zLayer
-    unsigned int getLayerStartIndex(double zLayerTarget) const;
-    unsigned int getLayerEndIndex(double zLayerTarget) const;
+    //get a const ref to the vector of layers
+    inline const std::vector<double>& getLayerVecRef() const {return zLayers;}
 
-    unsigned int getLayerOrigStartIndex(double zLayerTarget) const;
-    unsigned int getLayerOrigEndIndex(double zLayerTarger) const;
+    // get the start/end of a zLayer
+    unsigned int getLayerStartIndex(double zLayerTarget, unsigned int hint = 0) const;
+    unsigned int getLayerEndIndex(double zLayerTarget, unsigned int hint = -1) const;
+
+    unsigned int getLayerOrigStartIndex(double zLayerTarget, unsigned int hint = 0) const;
+    unsigned int getLayerOrigEndIndex(double zLayerTarger, unsigned int hint = -1) const;
 };
 
 template <class Functor>
@@ -115,6 +118,20 @@ void iterateGCPLayer(const GCodeParser& gcp, double zLayer, Functor& functor){
 template <class Functor>
 void iterateOrigGCPLayer(const GCodeParser& gcp, double zLayer, Functor& functor){
     for(unsigned int i = gcp.getLayerOrigStartIndex(zLayer); i <= gcp.getLayerOrigEndIndex(zLayer); i++){
+        functor(gcp.orig_at(i));
+    }
+}
+
+template <class Functor>
+void iterateGCPSlice(const GCodeParser& gcp, const unsigned int startIndex, const unsigned int endIndex, Functor& functor){
+    for(auto i = startIndex; i <= endIndex; i++){
         functor(gcp.at(i));
+    }
+}
+
+template <class Functor>
+void iterateOrigGCPSlice(const GCodeParser& gcp, const unsigned int startIndex, const unsigned int endIndex, Functor& functor){
+    for(auto i = startIndex; i <= endIndex; i++){
+        functor(gcp.orig_at(i));
     }
 }

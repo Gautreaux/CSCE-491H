@@ -365,12 +365,12 @@ const GCodeSegment& GCodeParser::orig_at(unsigned int i) const{
     return segmentsList[i];
 }
 
-unsigned int GCodeParser::getLayerStartIndex(double zLayerTarget) const {
+unsigned int GCodeParser::getLayerStartIndex(double zLayerTarget, unsigned int hint) const {
     //TODO - could be a binary search or something more efficient, because
     //requires segments to be in monotonic increasing order
     assert(readErrorBit(ErrorTypes::MONO_ERROR) == false);
 
-    for(unsigned int i = 0; i < segmentsList.size(); i++){
+    for(unsigned int i = hint; i < segmentsList.size(); i++){
         const GCodeSegment& gcs = segmentsList.at(i);
         if(gcs.isZParallel()){
             double z = gcs.getStartPoint().getZ();
@@ -386,12 +386,14 @@ unsigned int GCodeParser::getLayerStartIndex(double zLayerTarget) const {
 }
 
 
-unsigned int GCodeParser::getLayerEndIndex(double zLayerTarget) const {
+unsigned int GCodeParser::getLayerEndIndex(double zLayerTarget, unsigned int hint) const {
     //TODO - could be a binary search or something more efficient, because
     //requires segments to be in monotonic increasing order
     assert(readErrorBit(ErrorTypes::MONO_ERROR) == false);
 
-    for(int i = segmentsList.size()-1; i >= 0; i--){
+    hint = ((hint < segmentsList.size()-1) ? hint : (segmentsList.size() - 1));
+
+    for(int i = hint; i >= 0; i--){
         const GCodeSegment& gcs = segmentsList.at(i);
         if(gcs.isZParallel()){
             auto z = gcs.getStartPoint().getZ();
@@ -406,12 +408,12 @@ unsigned int GCodeParser::getLayerEndIndex(double zLayerTarget) const {
     throw std::runtime_error("Could not match provided zLayer to one in file");
 }
 
-unsigned int GCodeParser::getLayerOrigStartIndex(double zLayerTarget) const {
+unsigned int GCodeParser::getLayerOrigStartIndex(double zLayerTarget, unsigned int hint) const {
     //TODO - could be a binary search or something more efficient, because
     //requires segments to be in monotonic increasing order
     assert(readErrorBit(ErrorTypes::MONO_ERROR) == false);
 
-    for(unsigned int i = 0; i < originalSegmentsList.size(); i++){
+    for(unsigned int i = hint; i < originalSegmentsList.size(); i++){
         const GCodeSegment& gcs = originalSegmentsList.at(i);
         if(gcs.isZParallel()){
             auto z = gcs.getStartPoint().getZ();
@@ -427,12 +429,14 @@ unsigned int GCodeParser::getLayerOrigStartIndex(double zLayerTarget) const {
 }
 
 
-unsigned int GCodeParser::getLayerOrigEndIndex(double zLayerTarget) const {
+unsigned int GCodeParser::getLayerOrigEndIndex(double zLayerTarget, unsigned int hint) const {
     //TODO - could be a binary search or something more efficient, because
     //requires segments to be in monotonic increasing order
     assert(readErrorBit(ErrorTypes::MONO_ERROR) == false);
 
-    for(int i = originalSegmentsList.size()-1; i >= 0; i--){
+    hint = ((hint < originalSegmentsList.size()-1) ? hint : (originalSegmentsList.size() - 1));
+
+    for(int i = hint; i >= 0; i--){
         const GCodeSegment& gcs = originalSegmentsList.at(i);
         if(gcs.isZParallel()){
             auto z = gcs.getStartPoint().getZ();

@@ -142,15 +142,33 @@ void dumpGCP(std::ostream& o, const GCodeParser& gcp){
         return;
     }
     o << '\t' << gcp.numberOrigSegments() << " " << gcp.numberSegments() << " " << gcp.numberZLayers() << std::endl;
-    for(auto layerIter = gcp.layers_begin(); layerIter != gcp.layers_end(); layerIter++){
-        double layerValue = *layerIter;
+    
+    const std::vector<double>& layersRef = gcp.getLayerVecRef();
+    unsigned int nextStart = 0;
+    unsigned int nextOrigStart = 0;
+
+    for(unsigned int i = 0; i < layersRef.size(); i++){
+        double layerValue = layersRef.at(i);
+        unsigned int thisStart = nextStart;
+        unsigned int thisOrigStart = nextOrigStart;
+
+        if(i == (layersRef.size()-1)){
+            //this is the last layer
+            nextStart = -1;
+            nextOrigStart = -1;
+        }else{
+            nextStart = gcp.getLayerStartIndex(layersRef.at(i+1), thisStart);
+            nextOrigStart = gcp.getLayerOrigStartIndex(layersRef.at(i+1), thisOrigStart); 
+        }
+
+        unsigned int thisEnd = gcp.getLayerEndIndex(layerValue, nextStart);
+        unsigned int thisOrigEnd = gcp.getLayerOrigEndIndex(layerValue, nextOrigStart);
 
         LayerSummer seg;
-        iterateGCPLayer(gcp, layerValue, seg);
+        iterateGCPSlice(gcp, thisStart, thisEnd, seg);
 
         LayerSummer orig;
-        iterateOrigGCPLayer(gcp, layerValue, orig);
-
+        iterateOrigGCPSlice(gcp, thisOrigStart, thisOrigEnd, orig);
 
         o << '\t' << layerValue << " ";
         o << seg.getNumSegments() << " ";
@@ -181,7 +199,7 @@ void threadFunction(const unsigned int threadID, CommonThreadParameters *const C
         fullPath += CTP->fileNames->at(fileIndex);
 
         ofs << fullPath << std::endl;
-        try{
+        try {
             GCodeParser gcp(fullPath);
 
             dumpGCP(ofs, gcp);
@@ -190,12 +208,14 @@ void threadFunction(const unsigned int threadID, CommonThreadParameters *const C
                 CTP->totalValid.fetch_add(1);
                 CTP->totalBytesValid.fetch_add(gcp.getFileSize());
             }
-        } catch (...){
+        }catch (...){
             ofs << "\tEXCEPTION" << std::endl;
         }
 
         CTP->totalProcessed.fetch_add(1);
     }
+
+    ofs.close();
 
     printf("Thread %u processed %u files\n", threadID, totalProcessed);
     CTP->threadsRunning.fetch_sub(1);
