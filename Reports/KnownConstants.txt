@@ -2,6 +2,17 @@ All Files (R:/)
     13,938 files
     132,998,912,917 bytes
 
+    347 Files > 32 MB (phase 2 checks skipped)
+    All other (13591) files parse ok
+
+    Largest < 32 MB file: 921826
+        z .55 : 40255.4 mm, 37844 print segments
+    
+    Largest delta num seg: 971354
+        z 44.15 : orig 473226, now 618117, diff 144891
+
+    
+
 Expected All Files:
     30,515 files
     ~230,000,000,000 bytes

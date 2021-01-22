@@ -1,0 +1,12 @@
+//from running the general data collector on the files
+[728], Running: 8, Processed 13851/13938 (99.38%), Valid 13508, Bytes (valid) 36424MB (46.53MB/s)
+[730], Running: 8, Processed 13912/13938 (99.81%), Valid 13566, Bytes (valid) 36521MB (48.32MB/s)
+Thread 4 processed 1765 files
+Thread 1 processed 1784 files
+Thread 2 processed 1789 files
+Thread 7 processed 1693 files
+Thread 5 processed 1670 files
+Thread 0 processed 1827 files
+Thread 6 processed 1703 files
+Thread 3 processed 1707 files
+All threads joined, 13938 files (38392632267 bytes) processed
