@@ -37,6 +37,27 @@ def reportInstanceGenerator(sourceFilePath) -> Generator[List[str], None, None]:
             f = []
     
 
+def reportInstanceGeneratorNoNewline(sourceFilePath) -> Generator[List[str], None, None]:
+    with open(sourceFilePath, 'r') as inFile:
+        lineIter = iter(inFile)
+
+        f = None
+
+        try:
+            while(True):
+                f = [next(inFile).strip()]
+                while(True):
+                    n = next(inFile)
+                    if '\t' in n:
+                        f.append(n.strip())
+                    else:
+                        # start a new file
+                        yield f
+                        f = [n.strip()]
+        except StopIteration:
+            if f != []:
+                yield f
+
 def zLayerGenerator(lines, startInd = 4) -> Generator[Tuple[str], None, None]:
     assert((len(lines) - startInd) % 3 == 0)
     for i in range(startInd, len(lines), 3):
@@ -151,11 +172,49 @@ def processSegmentsGenericReports(outFileName, sourceFilesList : List[str]):
                         
                 print(convertListToCSVstr(fields), file=outFile)
 
+def processPointsReport(outFileName, sourceFilesList: List[str]):
+    headers = ['file_path', 'biggest_num_pts', 'biggest_num_pts_z']
 
+    with open(outFileName, 'w') as outFile:
+        print(convertListToCSVstr(headers), file=outFile)
+
+        for sourceFileName in sourceFilesList:
+            print(f"Starting file {sourceFileName}")
+
+            for reportInstance in reportInstanceGeneratorNoNewline(sourceFileName):
+                fields = []
+
+                # check if an exception occurred
+                try:
+                    for c in reportInstance:
+                        if "EXCEPTION" in c:
+                            print(f"Exception on {fields[0]}")
+                            raise BreakContinue
+                except BreakContinue:
+                    continue
+
+                # log filepath
+                fields.append(reportInstance[0])
+
+                maxP = 0
+                maxP_Z = "None"
+
+                for i in range(1, len(reportInstance)):
+                    Z,P_count = reportInstance[i].split(' ')
+                    P_count = int(P_count)
+                    if(P_count > maxP):
+                        maxP = P_count
+                        maxP_Z = Z
+
+                fields.append(str(maxP))
+                fields.append(maxP_Z)
+
+                print(convertListToCSVstr(fields), file=outFile)
 
 
 REPORTING_TYPES = {
-    "GenericReport" : processSegmentsGenericReports
+    "GenericReport" : processSegmentsGenericReports,
+    "PointsReport" : processPointsReport,
 }
 
 if __name__ == "__main__":

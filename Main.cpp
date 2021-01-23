@@ -185,6 +185,17 @@ void dumpGCP(std::ostream& o, const GCodeParser& gcp){
     o << std::endl;
 }
 
+void dumpPoints(std::ostream& o, const GCodeParser& gcp){
+    if(!gcp){
+        return;
+    }
+
+    for(auto layer : gcp.getLayerVecRef()){
+        LayerManager lm(gcp, layer);
+        o << "\t " << layer << " " << lm.getTotalPositions() << std::endl;
+    }
+}
+
 void threadFunction(const unsigned int threadID, CommonThreadParameters *const CTP){
     CTP->threadsRunning.fetch_add(1);
     unsigned int totalProcessed = 0;
@@ -204,7 +215,8 @@ void threadFunction(const unsigned int threadID, CommonThreadParameters *const C
         try {
             GCodeParser gcp(fullPath);
 
-            dumpGCP(ofs, gcp);
+            // dumpGCP(ofs, gcp);
+            dumpPoints(ofs, gcp);
 
             if(gcp){
                 CTP->totalValid.fetch_add(1);
@@ -336,7 +348,9 @@ int main(int argc, char ** argv){
         ThreadsafeIntGen gen;
 
         //create the thread parameters
-        CommonThreadParameters CTP(&gen, &files, p.path_str.c_str(), "Reports/GenericReport");
+        // CommonThreadParameters CTP(&gen, &files, p.path_str.c_str(), "Reports/GenericReport");
+        CommonThreadParameters CTP(&gen, &files, p.path_str.c_str(), "Reports/PointsReport");
+
 
         std::vector<std::thread> threads;
         threads.push_back(std::thread(reportingFunction, &CTP));
