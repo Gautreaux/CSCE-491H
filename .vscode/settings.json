@@ -58,6 +58,7 @@
         "xtr1common": "cpp",
         "filesystem": "cpp",
         "thread": "cpp",
-        "atomic": "cpp"
+        "atomic": "cpp",
+        "*.tcc": "cpp"
     }
 }
