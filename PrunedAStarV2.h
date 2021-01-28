@@ -21,8 +21,19 @@ template<class State_PQ, class LM_Type=Default_LM_Type, class State_Type=Default
 class PrunedAStarV2{
 protected:
 //Data Members
+    
+    //count of total states expanded
     unsigned int totalStatesExpanded;
+
+    //the minimum seperation allowed in mm
     const double minSeperationMM;
+    
+    //the maximum number of states allowed to step back
+    const unsigned int maximumStepBack;
+
+    //the minimum efficiency allowable in a solution
+    const double minimumEfficiency;
+    
 
 //Subclasses
 
@@ -91,6 +102,15 @@ protected:
             if(isGoalState(state)){
                 goalState = visitedObjects.push(state);
                 break;
+            }
+
+            if((bestState != nullptr) && ((state.getBitset().getSetCount() + maximumStepBack) < bestState->getBitset().getSetCount())){
+                //too far stepback, skip state
+                continue;
+            }
+            if(state.getEfficiency() < minimumEfficiency){
+                //state to innefficient, skip state
+                continue;
             }
 
             //check for state presence in the visited set
@@ -185,8 +205,10 @@ protected:
 
 public:
 //Constructors, Destructors
-    PrunedAStarV2(const GCodeParser& gcp, const double minSeperationMM = 25) :
-        totalStatesExpanded(0), minSeperationMM(minSeperationMM)
+    PrunedAStarV2(const GCodeParser& gcp, const double minSeperationMM = 25,
+        const unsigned int maximumStepBack = (unsigned int)(-1), const double minimumEfficiency = 0.0) :
+        totalStatesExpanded(0), minSeperationMM(minSeperationMM),
+        maximumStepBack(maximumStepBack), minimumEfficiency(minimumEfficiency)
     {
     }
     ~PrunedAStarV2(){}

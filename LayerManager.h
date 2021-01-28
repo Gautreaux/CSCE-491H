@@ -22,7 +22,13 @@ private:
     //TODO - should these be some unordered_bimap type?
     BiMap<GCP_Index, Bitset_Index> printedSegmentsTranslation;
     BiMap<Point3, Position_Index> pointPositionIndexTranslation;
+
+    //mapping of Position_Index to Vector[BitSet_Index]
     std::vector<Adjacent_Bitset_Indexes> adjacentSegments;
+
+    //collection of all the positions that start/end a segment
+    std::vector<Position_Index> chainStartEndIndexes;
+    unsigned int totalChains;
 
 public:
     LayerManager(const GCodeParser& gcp, double layer);
@@ -53,6 +59,15 @@ public:
     }
     inline const Adjacent_Bitset_Indexes& getAdjacentSegments(const Position_Index i) const {
         return adjacentSegments.at(i);
+    }
+
+    inline const std::vector<Position_Index>& getChainStartEndIndexes(void) const {
+        return chainStartEndIndexes;
+    }
+
+    //get the total number of chains in this layer
+    inline unsigned int getTotalChains(void) const {
+        return totalChains;
     }
 
     //iterators

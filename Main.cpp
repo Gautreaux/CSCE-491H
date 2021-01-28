@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include "GCodeParser.h"
-#include "PrunedAStarV2BruteForce.h"
+#include "PrunedAStarV2SmartBrute.h"
 #include "ThreadingContents.h"
 #include "UtilLib/FileUtil.h"
 
@@ -120,7 +120,7 @@ int main(int argc, char ** argv){
             exit(1);
         }
 
-        PrunedAStarV2BruteForce p(gcp, 25);
+        PrunedAStarV2SmartBrute p(gcp, 25, -1, 0.0);
         p.doRecompute(gcp);
         std::cout << "Total States Explored: " << p.getTotalStatesExpanded() << std::endl; 
         std::cout << "Normal Exit occurred" << std::endl;

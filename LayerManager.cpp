@@ -17,6 +17,9 @@ LayerManager::LayerManager(const GCodeParser& gcp, const double layer){
     //extract only the print segments from the layer
     totalPrintSegments = 0;
 
+    std::vector<GCP_Index> chainStarts;
+    std::vector<GCP_Index> chainEnds;
+
     for(GCP_Index i = layerStartIndex; i <= layerEndIndex; i++){
         //TODO - debug checks that all segments are in the provided layer
         auto thisSeg = gcp.at(i);
@@ -24,6 +27,18 @@ LayerManager::LayerManager(const GCodeParser& gcp, const double layer){
         if(thisSeg.isPrintSegment()){
             printedSegmentsTranslation.insert(i, totalPrintSegments);
             totalPrintSegments++;
+
+            if(i == layerStartIndex){
+                chainStarts.push_back(i);
+            }else if(gcp.at(i-1).isPrintSegment() == false){
+                chainStarts.push_back(i);
+            }
+
+            if(i == layerEndIndex){
+                chainEnds.push_back(i);
+            }else if(gcp.at(i+1).isPrintSegment() == false){
+                chainEnds.push_back(i);
+            }
         }
     }
 
@@ -38,9 +53,15 @@ LayerManager::LayerManager(const GCodeParser& gcp, const double layer){
 #endif
 #endif
 
+    assert(chainStarts.size() == chainEnds.size());
+    totalChains = chainStarts.size();
+
     if(totalPrintSegments == 0){
         return;
     }
+
+    auto startsIterator = chainStarts.begin();
+    auto endsIterator = chainEnds.begin();
 
     //resolve all the positions and build adjacency list
     totalPositions = 0;
@@ -48,11 +69,24 @@ LayerManager::LayerManager(const GCodeParser& gcp, const double layer){
         auto& startPosition = gcp.at(i->first).getStartPoint();
         auto& endPosition = gcp.at(i->first).getEndPoint();
 
+        while((startsIterator != chainStarts.end()) && (i->first > *startsIterator)){
+            startsIterator++;
+        }
+
+        while((endsIterator != chainEnds.end()) && (i->first > *endsIterator)){
+            endsIterator++;
+        }
+
         if(pointPositionIndexTranslation.countByA(startPosition) == 0){
             pointPositionIndexTranslation.insert(startPosition, totalPositions);
             assert(adjacentSegments.size() == totalPositions);
             adjacentSegments.push_back(Adjacent_Bitset_Indexes());
             adjacentSegments.back().push_back(i->second);
+
+            if(i->first == *startsIterator){
+                chainStartEndIndexes.push_back(totalPositions);
+            }
+
             totalPositions++;
         }else{
             auto t = pointPositionIndexTranslation.findByA(startPosition);
@@ -64,6 +98,11 @@ LayerManager::LayerManager(const GCodeParser& gcp, const double layer){
             assert(adjacentSegments.size() == totalPositions);
             adjacentSegments.push_back(Adjacent_Bitset_Indexes());
             adjacentSegments.back().push_back(i->second);
+
+            if(i->first == *endsIterator){
+                chainStartEndIndexes.push_back(totalPositions);
+            }
+
             totalPositions++;
         }else{
             auto t = pointPositionIndexTranslation.findByA(endPosition);

@@ -36,18 +36,20 @@ public:
 typedef PQWrapper<EfficiencyCompare> Brute_Force_PQ_Type;
 
 class PrunedAStarV2BruteForce : public PrunedAStarV2<Brute_Force_PQ_Type> {
-private:
+protected:
     virtual void generateStartingPositions(const GCodeParser& gcp, const Default_LM_Type& lm, Brute_Force_PQ_Type& pq){
         // unsigned int totalPositions = lm.getTotalPositions();s
         DynamicBitset startBitset(lm.getTotalPrintSegments());
 
-        for(unsigned int i = 0; i < lm.getTotalPositions(); i++){
-            for(unsigned int j = 0; j < lm.getTotalPositions(); j++){
+        for(Position_Index i = 0; i < lm.getTotalPositions(); i++){
+
+            const Point3& pi = lm.getPoint3FromPos(i);
+
+            for(Position_Index j = 0; j < lm.getTotalPositions(); j++){
                 if(i == j){
                     continue;
                 }
 
-                const Point3& pi = lm.getPoint3FromPos(i);
                 const Point3& pj = lm.getPoint3FromPos(j);
 
                 if(isValidPositionPair(pi, pj)){
@@ -77,8 +79,9 @@ private:
     }
     
 public:
-    PrunedAStarV2BruteForce(const GCodeParser& gcp, const double MinSeperationMM) :
-        PrunedAStarV2(gcp, MinSeperationMM)
+    PrunedAStarV2BruteForce(const GCodeParser& gcp, const double MinSeperationMM,
+        const unsigned int maximumStepBack, const double minSeperationMM) :
+        PrunedAStarV2(gcp, MinSeperationMM, maximumStepBack, minSeperationMM)
     {}
 
 };
