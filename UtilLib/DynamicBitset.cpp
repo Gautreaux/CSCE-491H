@@ -186,3 +186,37 @@ bool operator==(const DynamicBitset& lhs, const DynamicBitset& rhs){
 
     return lhs.compareBits(rhs) == 0;
 }
+
+
+//this could be more efficient on the copying by accessing the buffers directly
+//  but the numSet would still need to be updated
+//      TODO - could use a lookup to optimize?
+DynamicBitset operator&(const DynamicBitset& lhs, const DynamicBitset& rhs){
+    const unsigned int minSize = std::min(lhs.size(), rhs.size());
+    DynamicBitset toReturn(minSize);
+
+    for(unsigned int i = 0; i < minSize; i++){
+        if(lhs.at(i) && rhs.at(i)){
+            toReturn.set(i, true);
+        }
+    }
+
+    return toReturn;
+}
+
+
+//this could be more efficient on the copying by accessing the buffers directly
+//  but the numSet would still need to be updated
+//      TODO - could use a lookup to optimize?
+DynamicBitset operator|(const DynamicBitset& lhs, const DynamicBitset& rhs){
+    const unsigned int minSize = std::min(lhs.size(), rhs.size());
+    DynamicBitset toReturn(minSize);
+
+    for(unsigned int i = 0; i < minSize; i++){
+        if(lhs.at(i) || rhs.at(i)){
+            toReturn.set(i, true);
+        }
+    }
+    
+    return toReturn;
+}

@@ -50,3 +50,9 @@ public:
 
 bool operator<(const DynamicBitset& lhs, const DynamicBitset& rhs);
 bool operator==(const DynamicBitset& lhs, const DynamicBitset& rhs);
+
+//bitwise and of two bitsets up to the length of the lesser of the two
+DynamicBitset operator&(const DynamicBitset& lhs, const DynamicBitset& rhs);
+
+//bitwise and of two bitsets up to the length of the lesser of the two
+DynamicBitset operator|(const DynamicBitset& lhs, const DynamicBitset& rhs);
