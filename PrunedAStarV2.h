@@ -7,6 +7,12 @@
 #include "RecomputeState.h"
 #include "UtilLib/NonReallocVector.h"
 
+#ifdef DEBUG
+#ifndef REPORTING_INTERVAL
+#define REPORTING_INTERVAL 100000
+#endif // REPORTING_INTERVAL
+#endif // DEBUG
+
 typedef LayerManager Default_LM_Type;
 typedef RecomputeState Default_State_Type;
 
@@ -77,13 +83,15 @@ protected:
         //stores a pointer to the best state
         const State_Type* bestState = nullptr;
 
-#ifdef DEBUG
         //stores total new states this layer
         unsigned int statesExpandedThisLayer = 0;
-#endif
 
         generateStartingPositions(gcp, lm, pq);
 
+        printf("Starting recompute of z=%.03f with parameters:"
+            " Min Seperation MM: %.03f, Max Stepback: %u, Minimum Efficiency: %.03f\n",
+            zLayer, minSeperationMM, maximumStepBack, minimumEfficiency
+        );
 #ifdef DEBUG
         printf("Layer resolved %llu total starting states\n", pq.size());
 #endif
@@ -95,36 +103,58 @@ protected:
             pq.pop();
 
             totalStatesExpanded += 1;
-#ifdef DEBUG
+
             statesExpandedThisLayer += 1;
-#endif
 
             if(isGoalState(state)){
                 goalState = visitedObjects.push(state);
                 break;
             }
 
-            if((bestState != nullptr) && ((state.getBitset().getSetCount() + maximumStepBack) < bestState->getBitset().getSetCount())){
-                //too far stepback, skip state
-                continue;
-            }
             if(state.getEfficiency() < minimumEfficiency){
                 //state to innefficient, skip state
+#ifdef DEBUG
+                printf("State %u, skipped (efficiency) (%.03f < %.03f)\n", 
+                    statesExpandedThisLayer, state.getEfficiency(), minimumEfficiency
+                );
+#endif
                 continue;
+            }
+
+            bool newBestState = false;
+            if(bestState == nullptr){
+                newBestState = true;
+            }else if(bestState->getBitset().getSetCount() < state.getBitset().getSetCount()){
+                //new best state
+                newBestState = true;
+            }else{
+                //newBestState is inherently more set than the pervious best,
+                //  which can cause some integer rollunders on this, which is bad
+                //  so only do check on non-new-best states
+                if((bestState->getBitset().getSetCount() - state.getBitset().getSetCount()) <= maximumStepBack){
+                    //this state is ok on stepback, so pass
+                }else{
+                    //too far stepback, skip state
+#ifdef DEBUG
+                    printf("State %u, skipped (stepback) (set: %u, stepback: %u, best: %u)\n", 
+                        statesExpandedThisLayer, state.getBitset().getSetCount(),
+                        maximumStepBack, bestState->getBitset().getSetCount()
+                    );
+#endif
+                    continue;                    
+                }
             }
 
             //check for state presence in the visited set
             //  but to do this, we need the pointer to a constant state
             //  so that we can insert in position if not already found
             RecomputeState* statePtr = visitedObjects.push(state);
-            if(visitedSet.insert(statePtr).second){
-                //this is a new state so check if it is the best state
-                if(bestState == nullptr){
-                    bestState = statePtr;
-                }else if(bestState->getBitset().getUnsetCount() > statePtr->getBitset().getUnsetCount()){
-                    bestState = statePtr;
-                }
+            if(newBestState){
+                bestState = statePtr;
+            }
 
+            //while newBestState implies a new state, need to still add it to the set
+            if(visitedSet.insert(statePtr).second){
                 //this is a new state, and we can expand
                 generateSuccessorStates(statePtr, gcp, lm, pq);
             }else{
@@ -133,7 +163,7 @@ protected:
             }
 
 #ifdef DEBUG
-        if(statesExpandedThisLayer % 100000 == 0){
+        if((statesExpandedThisLayer % REPORTING_INTERVAL) == 0){
             printf("Total %u states expanded. ", statesExpandedThisLayer);
             if(bestState != nullptr){
                 printf("Pending states %llu (avg_eff: %f); Best state %u/%u printed, depth: %d, efficiency: %f\n", 
@@ -217,6 +247,9 @@ public:
     void doRecompute(const GCodeParser& gcp){
         for(auto layer = gcp.layers_begin(); layer < gcp.layers_end(); layer++){
             doRecomputeLayer(gcp, *layer);
+#ifdef SINGLE_LAYER_ONLY
+            break;
+#endif
         }
     }
 
