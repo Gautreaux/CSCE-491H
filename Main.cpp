@@ -7,6 +7,8 @@
 #include "ThreadingContents.h"
 #include "UtilLib/FileUtil.h"
 
+#include "ChainStar.h"
+
 using std::cout;
 using std::endl;
 
@@ -109,21 +111,31 @@ int main(int argc, char ** argv){
 
         if(gcp){
             printf("Found %d segments in %d layers in the file.\n", gcp.numberSegments(), gcp.numberZLayers());
-            if(gcp.numberSegments() < 30){
-                for (auto it = gcp.segments_begin(); it != gcp.segments_end(); it++){
-                    cout << *it << endl;
-                }
-                cout << endl;
-            }
+            // if(gcp.numberSegments() < 30){
+            //     for (auto it = gcp.segments_begin(); it != gcp.segments_end(); it++){
+            //         cout << *it << endl;
+            //     }
+            //     cout << endl;
+            // }
         }else{
             printf("gcp failed, exiting");
             exit(1);
         }
 
-        PrunedAStarV2SmartBrute p(gcp, 25, -1, 0.0);
-        p.doRecompute(gcp);
-        std::cout << "Total States Explored: " << p.getTotalStatesExpanded() << std::endl; 
-        std::cout << "Normal Exit occurred" << std::endl;
+        // PrunedAStarV2SmartBrute p(gcp, 25, -1, 0.0);
+        // p.doRecompute(gcp);
+        // std::cout << "Total States Explored: " << p.getTotalStatesExpanded() << std::endl; 
+        // std::cout << "Normal Exit occurred" << std::endl;
+
+        double z = *(gcp.layers_begin());
+        std::cout << "Testing on ChainLayerMeta on z = " << z << std::endl;
+        const ChainLayerMeta clm(gcp, z);
+
+        printf("Resolved %lu chains in file:\n", clm.getChainListRef().size());
+
+        for(auto chain : clm.getChainListRef()){
+            std::cout << "  " << chain << endl;
+        }
     }
     else
     {

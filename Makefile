@@ -8,7 +8,7 @@ CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -Wall -o $@ $< *.o
 
 EXECUTABLE=Main
 
-$(EXECUTABLE) : Main.cpp FileUtil.o GCodeParser.o PrunedAStarV2SmartBrute.o ThreadingContents.o
+$(EXECUTABLE) : Main.cpp FileUtil.o GCodeParser.o PrunedAStarV2SmartBrute.o ChainStar.o ThreadingContents.o
 	$(CC_COMPILE_LINK_EXE_AUTO) -lpthread
 
 # declaring a phony forces the top level to always rebuild
@@ -72,7 +72,8 @@ LayerManager.o : LayerManager.cpp LayerManager.h GCodeParser.o GCodeSegment.o Po
 PQWrapper.o : PQWrapper.cpp PQWrapper.h RecomputeState.o pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-ThreadingContents.o : ThreadingContents.cpp ThreadingContents.h GCodeParser.o LayerManager.o ThreadsafeIntGen.o pch.o
+# chain* files
+ChainStar.o : ChainStar.cpp ChainStar.h DynamicBitset.o GCodeParser.o pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # util files
@@ -89,6 +90,9 @@ FileUtil.o : UtilLib/FileUtil.cpp UtilLib/FileUtil.h pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 ThreadsafeIntGen.o : UtilLib/ThreadsafeIntGen.cpp UtilLib/ThreadsafeIntGen.h pch.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+ThreadingContents.o : ThreadingContents.cpp ThreadingContents.h GCodeParser.o LayerManager.o ThreadsafeIntGen.o pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # testing files
