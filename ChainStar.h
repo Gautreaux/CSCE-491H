@@ -10,6 +10,9 @@
 //TODO - make a parameter:
 #define CHAIN_MIN_SEPERATION_MM 25.0
 
+#define SINGLE_LAYER_ONLY
+#warning "Forcing single layer mode"
+
 //represents a single print chain
 class Chain{
 public:    
@@ -30,10 +33,22 @@ protected:
 
 public:
 //constructors
+    Chain() : startIndex(0), chainLength(0), traversalDirection(Direction::FORWARD) {};
     Chain(const unsigned int startIndex, const unsigned int chainLength, 
         const bool isForwardChain);
     Chain(const Chain& other);
     // Chain& operator=(const Chain& other);
+
+//methods
+
+    //get the ending index of the chain
+    //  note end index is inclusive on the interval
+    inline unsigned int getEndIndex(void) const {
+        return ((traversalDirection == Direction::FORWARD) ?
+            startIndex + chainLength - 1 : startIndex - chainLength + 1
+        );
+    }
+
 
 //accessors
 
@@ -50,15 +65,35 @@ public:
 
 struct PreComputeChain{
 public:
-    const Chain& c1;
-    const Chain& c2;
-    const unsigned int amountPrinted;
+    Chain c1;
+    Chain c2;
+    unsigned int amountPrinted;
+
+    PreComputeChain() : c1(), c2(), amountPrinted(0) {};
 
     PreComputeChain(const Chain& c1, const Chain& c2,
         const unsigned int amountPrinted) : c1(c1), c2(c2),
         amountPrinted(amountPrinted)
     {}
+
+    // Manual Definitions of various move/copy assignments/constructors
+    // PreComputeChain(const PreComputeChain& other) : c1(other.c1), c2(other.c2),
+    //     amountPrinted(other.amountPrinted)
+    // {}
+    //
+    // PreComputeChain& operator=(const PreComputeChain& other){
+    //     c1 = other.c1;
+    //     c2 = other.c2;
+    //     amountPrinted = other.amountPrinted;
+    // }
+    //
+    // PreComputeChain(PreComputeChain&& other) : c1(other.c1), c2(other.c2),
+    //     amountPrinted(other.amountPrinted)
+    // {}
 };
+
+bool operator<(const Chain& lhs, const Chain& rhs);
+bool operator<(const PreComputeChain& lhs, const PreComputeChain& rhs);
 
 std::ostream& operator<<(std::ostream& os, const Chain& c);
 
@@ -91,11 +126,19 @@ public:
     //return a dynamic bitset that represents this chain in the layer
     //  (the bitset size is that of total print segments
     //   all elements in the chain are set, while others are not)
-    DynamicBitset chainAsBitMask(unsigned int chainID) const;
+    DynamicBitset chainAsBitMask(const Chain& c) const;
+
+    //chainAsBitMask for both chains in the PreComputeChain
+    DynamicBitset preComputeChainAsBitMask(const PreComputeChain& pcc) const;
 
     //determine how far the two chains can be printed before colliding
     // return how many steps can be completed concurrently
     unsigned int resolveChainPair(const Chain& chainA, const Chain& chainB) const;
+    inline unsigned int resolveChainPair(
+        const std::pair<const Chain&, const Chain&> chainPair) const 
+    {
+        return resolveChainPair(chainPair.first, chainPair.second);
+    }
 
 //accessors
 
@@ -122,7 +165,7 @@ protected:
     void doRecomputeLayer(const GCodeParser& gcp, const double zLayer);
 
 public:
-    ChainStar();
+    ChainStar(){};
 
     //recompute on the provided GCP file
     //  define pre-processor flag 'SINGLE_LAYER_ONLY' to run just the first layer

@@ -140,7 +140,9 @@ int main(int argc, char ** argv){
         }
 
         // clm.doAllPairsCheck();
-        clm.doAllChainsCheck();
+        // clm.doAllChainsCheck();
+        ChainStar cs;
+        cs.doRecompute(gcp);
     }
     else
     {
