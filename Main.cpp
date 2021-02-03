@@ -131,11 +131,16 @@ int main(int argc, char ** argv){
         std::cout << "Testing on ChainLayerMeta on z = " << z << std::endl;
         const ChainLayerMeta clm(gcp, z);
 
-        printf("Resolved %lu chains in file:\n", clm.getChainListRef().size());
+        printf("Resolved %u print segments in layer.\n", clm.getNumPrintSegmentsInLayer());
+        printf("Resolved %lu chains in layer:\n", clm.getChainListRef().size());
 
+        int chainNum = 0;
         for(auto chain : clm.getChainListRef()){
-            std::cout << "  " << chain << endl;
+            std::cout << "  " << chainNum++ << " " << chain << endl;
         }
+
+        // clm.doAllPairsCheck();
+        clm.doAllChainsCheck();
     }
     else
     {
