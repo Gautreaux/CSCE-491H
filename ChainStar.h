@@ -103,7 +103,7 @@ typedef std::pair<unsigned int, unsigned int> UIntPair;
 //stores metadata about a layer in the 
 class ChainLayerMeta{
 protected:
-    // stores a list of all the chains in this layer
+    // stores a list of all the chains in this layer sorted smallest to largest
     ChainList chains;
 
     // tranlate a layer index to proper GCP index

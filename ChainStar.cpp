@@ -1,5 +1,6 @@
 #include "ChainStar.h"
 
+#include <algorithm>
 #include <set>
 #include <queue>
 
@@ -74,6 +75,8 @@ ChainLayerMeta::ChainLayerMeta(const GCodeParser& gcp, const double layer) :
         chains.emplace_back(totalPrintSegments - 1, chainLen, false); 
         inPrintChain = false;
     }
+
+    std::sort(chains.begin(), chains.end());
 }
 
 unsigned int ChainLayerMeta::resolveChainPair(const Chain& chainA, 
@@ -164,15 +167,16 @@ void ChainLayerMeta::doAllChainsCheck(void) const {
 }
 
 bool operator<(const Chain& lhs, const Chain& rhs){
-    if(lhs.getStartIndex() < rhs.getStartIndex()){
-        return true;
-    }else if(lhs.getStartIndex() > rhs.getStartIndex()){
-        return false;
-    }
 
     if(lhs.getChainLength() < rhs.getChainLength()){
         return true;
     }else if(lhs.getChainLength() > rhs.getChainLength()){
+        return false;
+    }    
+    
+    if(lhs.getStartIndex() < rhs.getStartIndex()){
+        return true;
+    }else if(lhs.getStartIndex() > rhs.getStartIndex()){
         return false;
     }
 
@@ -206,6 +210,9 @@ bool operator<(const PreComputeChain& lhs, const PreComputeChain& rhs){
     return lhs.c2 < rhs.c2;
 }
 
+//used to prevent wasting time on a bunch of small chains
+#define CONCURRENT_CONSIDERATIONS_TARGET 100
+
 void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     const ChainLayerMeta clm(gcp, zLayer);
     const int numberSegmentsInLayer = clm.getNumPrintSegmentsInLayer();
@@ -225,17 +232,28 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     //count the number of chain reductions performed
     unsigned int reductionRounds = 0;
 
+    //iterator for the chain source
+    auto chainSourceIter = clm.getChainListRef().rbegin();
+    auto chainSourceEnd = clm.getChainListRef().rend();
+
+
     while(true){
         if(currentPrinted.getUnsetCount() == 0){
             //we have pathed the whole layer
             break;
         }
 
+        //backfill the concurrent considerations
+        while((chainSourceIter != chainSourceEnd) &&
+                (consideredChains.size() < CONCURRENT_CONSIDERATIONS_TARGET))
+        {
+            consideredChains.insert(*chainSourceIter);
+            chainSourceIter++;
+        }        
+        
         if(currentPrinted.getSetCount() == 0){
             //first iteration, all chains are pending
-            for(const Chain& chain : clm.getChainListRef()){
-                consideredChains.insert(chain);
-            }
+            //do nothing
         }
         else{
             //cut down the pending chains for anything that overlaps
@@ -285,10 +303,21 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
                         consideredChains.insert(
                             Chain(c.getEndIndex(), runLen, false)
                         );
-                }
+                    }
                 }
             }
         }
+
+        // (Deprecated) remove all chains that are below the threashold
+        // unsigned int minChainActual;
+        // if((*consideredChains.end()).getChainLength() <= MIN_CHAIN_THRESHOLD){
+        //     minChainActual = 0;
+        // }else{
+        //     minChainActual = MIN_CHAIN_THRESHOLD;
+        // }
+        // Chain testC(0, minChainActual, true);
+        // auto eIter = consideredChains.upper_bound(testC);
+        // consideredChains.erase(consideredChains.begin(), eIter);
 
         //ensure that all current chains have the collision-ness computed
         for(const Chain& chain1 : consideredChains){
@@ -358,6 +387,36 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
                 }
             }
             printf("Longest remaining pair: %u\n", longestPair);
+
+            if(chainSourceIter != chainSourceEnd){
+                printf("WARNING! not all source chains consumed\n");
+            }else{
+                printf("All source chains consumed\n");
+            }
+            
+            //check if the following are both true
+            //  1. the remaining chains covers all the printed segments
+            //  2. the remaining chains do not overlap at all;
+            DynamicBitset partialDBS(currentPrinted);
+            unsigned int partialSum = 0;
+
+            for(const Chain& chain1 : consideredChains){
+                partialDBS = partialDBS | clm.chainAsBitMask(chain1);
+                partialSum += chain1.getChainLength();
+            }
+
+            if(partialDBS.getUnsetCount() == 0){
+                printf("Remaining chains fully cover layer\n");
+            }else{
+                printf("WARNING! remaining chains do not fully cover layer.\n");
+            }
+
+            if(partialSum == (partialDBS.getSetCount() - currentPrinted.getSetCount())){
+                printf("Remaning chains have no overlap.\n");
+            }else{
+                printf("%u/%u overlap in the remaning chains set.\n", 
+                    partialSum, currentPrinted.getUnsetCount());
+            }
 
             //TODO - what to do here
             printf("Error in Recomputing layer.\n");

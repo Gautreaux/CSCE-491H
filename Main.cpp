@@ -134,9 +134,11 @@ int main(int argc, char ** argv){
         printf("Resolved %u print segments in layer.\n", clm.getNumPrintSegmentsInLayer());
         printf("Resolved %lu chains in layer:\n", clm.getChainListRef().size());
 
-        int chainNum = 0;
-        for(auto chain : clm.getChainListRef()){
-            std::cout << "  " << chainNum++ << " " << chain << endl;
+        if(clm.getChainListRef().size() < 30){
+            int chainNum = 0;
+            for(auto chain : clm.getChainListRef()){
+                std::cout << "  " << chainNum++ << " " << chain << endl;
+            }
         }
 
         // clm.doAllPairsCheck();
