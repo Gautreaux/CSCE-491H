@@ -55,6 +55,7 @@ public:
     inline unsigned int getStartIndex(void) const {return startIndex;}
     inline unsigned int getChainLength(void) const {return chainLength;}
     inline Direction getDirection(void) const {return traversalDirection;}
+    inline bool isForward(void) const {return traversalDirection == Direction::FORWARD;}
 
     inline unsigned int at(unsigned int i) const {
         return ((traversalDirection == Direction::FORWARD) ? 
@@ -130,6 +131,16 @@ public:
 
     //chainAsBitMask for both chains in the PreComputeChain
     DynamicBitset preComputeChainAsBitMask(const PreComputeChain& pcc) const;
+
+    //determine how far along this chain agentA can traverse
+    //  return how many steps that is
+    //  presently, mostly insignificant function
+    unsigned int resolveCainAgentA(const Chain& chain);
+
+    //determine how far along this chain agentB can traverse
+    //  return how many steps that is
+    //  presently, mostly insignificant function
+    unsigned int resolveChainAgentB(const Chain& chain);
 
     //determine how far the two chains can be printed before colliding
     // return how many steps can be completed concurrently

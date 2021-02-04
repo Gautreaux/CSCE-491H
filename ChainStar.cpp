@@ -79,12 +79,27 @@ ChainLayerMeta::ChainLayerMeta(const GCodeParser& gcp, const double layer) :
     std::sort(chains.begin(), chains.end());
 }
 
+unsigned int resolveCainAgentA(const Chain& chain){
+    //TODO - add a check if agentA can print the whole chain
+    //since right now the chains are interchangable, just return length
+    return chain.getChainLength();
+}
+
+unsigned int resolveChainAgentB(const Chain& chain){
+    //TODO - add a check if agentB can print the whole chain
+    //since right now the chains are interchangable, just return length
+    return chain.getChainLength();
+}
+
+
 unsigned int ChainLayerMeta::resolveChainPair(const Chain& chainA, 
     const Chain& chainB) const
 {
     unsigned int maxLen = std::min(chainA.getChainLength(), chainB.getChainLength());
     for(unsigned int i = 0; i < maxLen; i++){
         if(
+            //TODO - add a check if chainA.at(i) can be printed by agentA
+            //TODO - add a check if chainB.at(i) can be printed by agentB
             gcp.at(segmentTranslation.at(chainA.at(i))).minSeperationDistance(
             gcp.at(segmentTranslation.at(chainB.at(i)))) < CHAIN_MIN_SEPERATION_MM
         ){
@@ -236,6 +251,8 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     auto chainSourceIter = clm.getChainListRef().rbegin();
     auto chainSourceEnd = clm.getChainListRef().rend();
 
+    //stores the pairs for the precompute chain that are resolved
+    std::vector<PreComputeChain> resolvedPrecomputeChainPairs;
 
     while(true){
         if(currentPrinted.getUnsetCount() == 0){
@@ -360,85 +377,167 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
             break;
         }
 
-        if(!validPCC){
-            printf("Probable error occurred. Dumping Data\n");
-            printf("Number of printed segments: %u/%u (unprinted: %u)\n",
-                currentPrinted.getSetCount(), clm.getNumPrintSegmentsInLayer(), 
-                currentPrinted.getUnsetCount()
+        if(validPCC){
+            const DynamicBitset dbsMask = clm.preComputeChainAsBitMask(pcc);
+
+            //debug check
+            //TODO - remove
+            assert((currentPrinted & dbsMask).getSetCount() == 0);
+
+            //TODO can optimize here if really wanted to
+            //  dont construct new bitset & copy, just update in place
+            currentPrinted = currentPrinted | dbsMask;
+
+            reductionRounds++;
+
+            //log info about the progression
+            printf("Reduction round %u: added %u*2 segments, total %u/%u, pending: %lu\n", 
+                reductionRounds, pcc.amountPrinted, currentPrinted.getSetCount(),
+                clm.getNumPrintSegmentsInLayer(), cachedChainPairsPQ.size()
             );
-            printf("Number of pending chains: %lu\n", consideredChains.size());
 
-            unsigned int longestChain = 0;
-            for(const Chain& chain1 : consideredChains){
-                if(chain1.getChainLength() > longestChain){
-                    longestChain = chain1.getChainLength();
-                }
-            }
-            printf("Longest Remaining Chain: %u\n", longestChain);
-
-            //so lets check one thing: are there really no moves
-            unsigned int longestPair = 0;
-            for(const Chain& chain1 : consideredChains){
-                for(const Chain& chain2 : consideredChains){
-                    unsigned int i = clm.resolveChainPair(chain1, chain2);
-                    if(i > longestPair){
-                        longestPair = i;
-                    }
-                }
-            }
-            printf("Longest remaining pair: %u\n", longestPair);
-
-            if(chainSourceIter != chainSourceEnd){
-                printf("WARNING! not all source chains consumed\n");
-            }else{
-                printf("All source chains consumed\n");
-            }
-            
-            //check if the following are both true
-            //  1. the remaining chains covers all the printed segments
-            //  2. the remaining chains do not overlap at all;
-            DynamicBitset partialDBS(currentPrinted);
-            unsigned int partialSum = 0;
-
-            for(const Chain& chain1 : consideredChains){
-                partialDBS = partialDBS | clm.chainAsBitMask(chain1);
-                partialSum += chain1.getChainLength();
-            }
-
-            if(partialDBS.getUnsetCount() == 0){
-                printf("Remaining chains fully cover layer\n");
-            }else{
-                printf("WARNING! remaining chains do not fully cover layer.\n");
-            }
-
-            if(partialSum == (partialDBS.getSetCount() - currentPrinted.getSetCount())){
-                printf("Remaning chains have no overlap.\n");
-            }else{
-                printf("%u/%u overlap in the remaning chains set.\n", 
-                    partialSum, currentPrinted.getUnsetCount());
-            }
-
-            //TODO - what to do here
-            printf("Error in Recomputing layer.\n");
-            throw std::runtime_error("Invalid state possibly reached");
+            //store this pre-compute-chain for the second phase
+            resolvedPrecomputeChainPairs.push_back(pcc);
+            continue;
         }
 
-        const DynamicBitset dbsMask = clm.preComputeChainAsBitMask(pcc);
-
-        //debug check
-        //TODO - remove
-        assert((currentPrinted & dbsMask).getSetCount() == 0);
-
-        //TODO can optimize here if really wanted to
-        //  dont construct new bitset & copy, just update in place
-        currentPrinted = currentPrinted | dbsMask;
-
-        reductionRounds++;
-
-        //log info about the progression
-        printf("Reduction round %u: added %u*2 segments, total %u/%u, pending: %lu\n", 
-            reductionRounds, pcc.amountPrinted, currentPrinted.getSetCount(),
-            clm.getNumPrintSegmentsInLayer(), cachedChainPairsPQ.size()
+        //this is a non-valid pcc,
+#ifdef DEBUG //some debug checking and printing
+        printf("All dual move segments resolved.\n");
+        printf("Number of printed segments: %u/%u (unprinted: %u)\n",
+            currentPrinted.getSetCount(), clm.getNumPrintSegmentsInLayer(), 
+            currentPrinted.getUnsetCount()
         );
+        printf("Number of pending chains: %lu\n", consideredChains.size());
+
+        unsigned int longestChain = 0;
+        for(const Chain& chain1 : consideredChains){
+            if(chain1.getChainLength() > longestChain){
+                longestChain = chain1.getChainLength();
+            }
+        }
+        printf("Longest Remaining Chain: %u\n", longestChain);
+
+        //so lets check one thing: are there really no moves
+        unsigned int longestPair = 0;
+        for(const Chain& chain1 : consideredChains){
+            for(const Chain& chain2 : consideredChains){
+                unsigned int i = clm.resolveChainPair(chain1, chain2);
+                if(i > longestPair){
+                    longestPair = i;
+                }
+            }
+        }
+        printf("Longest remaining pair: %u\n", longestPair);
+
+        if(chainSourceIter != chainSourceEnd){
+            printf("WARNING! not all source chains consumed\n");
+        }else{
+            printf("All source chains consumed\n");
+        }
+        
+        //check if the following are both true
+        //  1. the remaining chains covers all the printed segments
+        //  2. the remaining chains do not overlap at all;
+        DynamicBitset partialDBS(currentPrinted);
+        unsigned int partialSum = 0;
+
+        for(const Chain& chain1 : consideredChains){
+            partialDBS = partialDBS | clm.chainAsBitMask(chain1);
+            partialSum += chain1.getChainLength();
+        }
+
+        if(partialDBS.getUnsetCount() == 0){
+            printf("Remaining chains fully cover layer\n");
+        }else{
+            printf("WARNING! remaining chains do not fully cover layer.\n");
+        }
+
+        if(partialSum == (partialDBS.getSetCount() - currentPrinted.getSetCount())){
+            printf("Remaning chains have no overlap.\n");
+        }else{
+            printf("%u/%u overlap in the remaning chains set.\n", 
+                partialSum, currentPrinted.getUnsetCount());
+        }
+#endif
+
+        //TODO - push final chains for full coverages
+        Chain noopChain(0, 0, true);
+
+        while(currentPrinted.getUnsetCount() > 0){
+            if(consideredChains.size() == 0){
+                throw std::runtime_error(
+                        "Could not utilize remainder chains to cover unprinted"
+                );
+            }
+
+            //since chain is ordered in-order,
+            //  this is the longest chain
+            const Chain c = *(consideredChains.rbegin());
+            consideredChains.erase(c);
+            DynamicBitset dbs = clm.chainAsBitMask(c);
+
+            //TODO - or sum is more efficient
+            if((dbs & currentPrinted).getSetCount() != 0){
+                //there was overlap in chain and printed
+                continue;
+            }
+
+            //TODO - check which agent(s) can print this chain
+
+            PreComputeChain pccNew(c, noopChain, c.getChainLength());
+            currentPrinted = currentPrinted | dbs; // TODO - overload |=
+            resolvedPrecomputeChainPairs.push_back(pccNew);
+        }
+
+        //since we now have full coverage:
+        break; //would happen at top of loop anyway but whatever
+    } // while(True)
+
+    //debug checking to ensure this is a valid config
+    printf("Starting pre-phase 2 checks\n");
+    printf("Total chain pairs: %lu\n", resolvedPrecomputeChainPairs.size());
+    DynamicBitset debugDBS(clm.getNumPrintSegmentsInLayer());
+    unsigned int numOverlapping = 0;
+    for(const PreComputeChain& pcc : resolvedPrecomputeChainPairs){
+        for(int i = 0; i < 2; i++){
+            const Chain& origChainRef = ((i == 0) ? pcc.c1 : pcc.c2);
+            if(origChainRef.getChainLength() == 0){
+                continue;
+            }
+            
+            //create a new chain reduced to the size of the printed amount
+            Chain c(origChainRef.getStartIndex(), pcc.amountPrinted,
+                origChainRef.isForward()
+            );
+            
+            DynamicBitset dbs = clm.chainAsBitMask(c);
+            if((dbs & debugDBS).getSetCount() != 0){
+                std::cout << "Chain overlaps already printed: " << c << std::endl;
+                numOverlapping++;
+            }
+            debugDBS = debugDBS | dbs;
+        }
     }
+
+    if(numOverlapping != 0){
+        throw std::runtime_error("Error in pre-phase 2 checks\n");
+    }
+    std::cout << "Passed pre-phase 2 checks." << std::endl;
+
+    //now link partial chains together in an efficient way
+    //  start with the set of all chains
+    //  while the size of the set of all chains > 1:
+    //      determine the time from each chain endpoint
+    //          to all other chain endpoints
+    //      pick the closest two chain's endpoints
+    //      remove corresponding chains from set
+    //      combine the two chains into a super chain
+    //      insert new chain into set
+
+    //debug check that the resulting path is
+    // 1. a valid non-colliding path
+    // 2. covers, with no extra segments, the original path
+
+    //finally export to a reasonable representation
 }

@@ -16,5 +16,3 @@ test.txt
 *.repOut
 Main
 
-# TODO - why is file non-deletable?
-Reports/921826.gcode
