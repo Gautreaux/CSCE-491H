@@ -1,7 +1,9 @@
 #include "ChainStar.h"
 
 #include <algorithm>
+#include <functional>
 #include <set>
+#include <tuple>
 #include <queue>
 
 void ChainStar::doRecompute(const GCodeParser& gcp){
@@ -79,12 +81,14 @@ ChainLayerMeta::ChainLayerMeta(const GCodeParser& gcp, const double layer) :
     std::sort(chains.begin(), chains.end());
 }
 
+//TODO - this should be in the ChainLayerMeta scope?
 unsigned int resolveCainAgentA(const Chain& chain){
     //TODO - add a check if agentA can print the whole chain
     //since right now the chains are interchangable, just return length
     return chain.getChainLength();
 }
 
+//TODO - this should be in the ChainLayerMeta scope?
 unsigned int resolveChainAgentB(const Chain& chain){
     //TODO - add a check if agentB can print the whole chain
     //since right now the chains are interchangable, just return length
@@ -163,6 +167,7 @@ void ChainLayerMeta::doAllPairsCheck(void) const {
     printf("Total concurrent finished, found %u segment pairs.\n", totalConcurrent);
 }
 
+//prints a grid of how the chains are resolved against eachother
 void ChainLayerMeta::doAllChainsCheck(void) const {
     std::cout << "-";
     unsigned int chainNum = 0;
@@ -396,8 +401,15 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
                 clm.getNumPrintSegmentsInLayer(), cachedChainPairsPQ.size()
             );
 
+            //construct a new pcc with only printed chains
+            PreComputeChain pcc_new(
+                Chain(pcc.c1.getStartIndex(), pcc.amountPrinted, pcc.c1.isForward()),
+                Chain(pcc.c2.getStartIndex(), pcc.amountPrinted, pcc.c2.isForward()),
+                pcc.amountPrinted
+            );
+
             //store this pre-compute-chain for the second phase
-            resolvedPrecomputeChainPairs.push_back(pcc);
+            resolvedPrecomputeChainPairs.push_back(pcc_new);
             continue;
         }
 
@@ -495,6 +507,7 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     } // while(True)
 
     //debug checking to ensure this is a valid config
+    //TODO - move into a preprocessor block?
     printf("Starting pre-phase 2 checks\n");
     printf("Total chain pairs: %lu\n", resolvedPrecomputeChainPairs.size());
     DynamicBitset debugDBS(clm.getNumPrintSegmentsInLayer());
@@ -506,14 +519,9 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
                 continue;
             }
             
-            //create a new chain reduced to the size of the printed amount
-            Chain c(origChainRef.getStartIndex(), pcc.amountPrinted,
-                origChainRef.isForward()
-            );
-            
-            DynamicBitset dbs = clm.chainAsBitMask(c);
+            DynamicBitset dbs = clm.chainAsBitMask(origChainRef);
             if((dbs & debugDBS).getSetCount() != 0){
-                std::cout << "Chain overlaps already printed: " << c << std::endl;
+                std::cout << "Chain overlaps already printed: " << origChainRef << std::endl;
                 numOverlapping++;
             }
             debugDBS = debugDBS | dbs;
@@ -521,7 +529,10 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     }
 
     if(numOverlapping != 0){
-        throw std::runtime_error("Error in pre-phase 2 checks\n");
+        throw std::runtime_error("Error in pre-phase 2 checks, double-printed segments\n");
+    }
+    if(debugDBS.getUnsetCount() != 0){
+        throw std::runtime_error("Error in pre-phase 2 checks, unprinted segments\n");
     }
     std::cout << "Passed pre-phase 2 checks." << std::endl;
 
@@ -534,6 +545,119 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     //      remove corresponding chains from set
     //      combine the two chains into a super chain
     //      insert new chain into set
+    // in practice its a little more complicated
+
+    //stores all the positions of chains that we need to deal with
+    //TODO - tuple into a struct
+    //tuple ordering
+    //  chain 1 position
+    //  chain 2 position
+    //  PCC_Pair index (because you cant transition from self to self)
+    std::vector<std::tuple<Point3, Point3, unsigned int> > chainPositions;
+
+    //TODO - PROBLEM IN HERE
+    //  HOW TO HANDLE THE NOOP CHAINS?
+    //  THE POINTS THAT ARE ALL ZERO
+    //now we need to add the endpoints to that set
+    for(unsigned int i = 0; i < resolvedPrecomputeChainPairs.size(); i++){
+        const PreComputeChain& pcc = resolvedPrecomputeChainPairs[i];
+        auto t = std::tuple<Point3, Point3, unsigned int>(
+            clm.getChainStartPoint(pcc.c1),
+            clm.getChainStartPoint(pcc.c2),
+            i
+        );
+
+        chainPositions.push_back(t);
+
+        t = std::tuple<Point3, Point3, unsigned int>(
+            clm.getChainEndPoint(pcc.c1),
+            clm.getChainEndPoint(pcc.c2),
+            i
+        );
+
+        chainPositions.push_back(t);
+    }
+
+    //TODO - tuple into struct
+    //tuple ordering
+    //  transition cost
+    //  PCC_pair transition start index
+    //  PCC_pair transition end index
+    std::priority_queue<std::tuple<unsigned int, unsigned int, unsigned int> >
+        transitionsPQ;
+
+    //for some position pair starting at i and ending at j
+    //  calculate the cost to transition from i to j
+    for(unsigned int i = 0; i < chainPositions.size(); i++){
+        for(unsigned int j = 0; j < chainPositions.size(); j++){
+            if(std::get<2>(chainPositions.at(i)) == 
+                std::get<2>(chainPositions.at(j)))
+            {
+                //these are the two endpoints of the same chain
+                //  (or the same point if i == j)
+                //so this is not a valid transition
+                continue;
+            }
+
+            //TODO
+            //calculate the transition time for this pair
+            int transitionTime = 0;
+
+            auto t = std::tuple<unsigned int, unsigned int, unsigned int>(
+                transitionTime, i, j
+            );
+            transitionsPQ.push(t);
+        }
+    }
+
+    //bitset for tracking which positions are (not) used already
+    DynamicBitset poisitionsBitset(chainPositions.size());
+
+    //tracks the total transition time penalty
+    unsigned int totalTransitionsTime = 0;
+
+    //compare against two, because two points
+    //  the start and end of the layer
+    //  can be unset and there is no problem
+    //TODO - long term
+    //  can inject a layer start point to make sure that the 
+    //      recomputed layer starts at some location
+    //      relatively reasonable to the previous layer's end point
+    while(poisitionsBitset.getUnsetCount() != 2){
+        if(poisitionsBitset.getUnsetCount() < 2){
+            //pretty sure this is an error and unreachable
+            std::cout << "Warning: reached possibly invalid state:"
+                " <2 unset in transition" << std::endl;
+            break;
+        }
+
+        while(true){
+            auto t = transitionsPQ.top();
+            transitionsPQ.pop();
+
+            //check if this is a new transition and is needed
+            unsigned int transition_start = std::get<1>(t);
+            unsigned int transition_end = std::get<2>(t);
+
+            if(poisitionsBitset.at(transition_start)){
+                //the transition's start point was already used
+                continue;
+            }
+
+            if(poisitionsBitset.at(transition_end)){
+                //the transition's end point was already used
+                continue;
+            }
+
+            poisitionsBitset.set(transition_start);
+            poisitionsBitset.set(transition_end);
+            totalTransitionsTime += std::get<0>(t);
+        }
+    }
+
+    //debug info
+    std::cout << "Total Transitions Time: " << totalTransitionsTime << std::endl;
+
 
     //debug check that the resulting path is
     // 1. a valid non-colliding path

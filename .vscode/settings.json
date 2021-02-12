@@ -59,6 +59,20 @@
         "filesystem": "cpp",
         "thread": "cpp",
         "atomic": "cpp",
-        "*.tcc": "cpp"
+        "*.tcc": "cpp",
+        "array": "cpp",
+        "chrono": "cpp",
+        "cinttypes": "cpp",
+        "clocale": "cpp",
+        "cstdarg": "cpp",
+        "ctime": "cpp",
+        "cwctype": "cpp",
+        "iterator": "cpp",
+        "memory_resource": "cpp",
+        "numeric": "cpp",
+        "optional": "cpp",
+        "random": "cpp",
+        "ratio": "cpp",
+        "string_view": "cpp"
     }
 }

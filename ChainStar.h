@@ -2,6 +2,7 @@
 
 #include "pch.h"
 
+#include <tuple>
 #include <vector>
 
 #include "UtilLib/DynamicBitset.h"
@@ -151,6 +152,15 @@ public:
         return resolveChainPair(chainPair.first, chainPair.second);
     }
 
+    inline Point3 getChainStartPoint(const Chain& chain) const {
+        const GCodeSegment& seg = gcp.at(chain.getStartIndex());
+        return ((chain.isForward()) ? seg.getStartPoint() : seg.getEndPoint());
+    }
+
+    inline Point3 getChainEndPoint(const Chain& chain) const {
+        const GCodeSegment& seg = gcp.at(chain.getEndIndex());
+        return ((chain.isForward()) ? seg.getEndPoint() : seg.getStartPoint());
+    }
 //accessors
 
     inline const ChainList& getChainListRef(void) const {return chains;}

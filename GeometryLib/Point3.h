@@ -11,6 +11,7 @@ protected:
     double z;
 
 public:
+    Point3(void);
     Point3(const double& x, const double& y, const double& z);
     Point3(const Point3& other);
 
