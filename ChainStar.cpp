@@ -473,6 +473,8 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
         }
 #endif
 
+        printf("%lu unmatched sub chains.\n", consideredChains.size()/2);
+
         //TODO - push final chains for full coverages
         Chain noopChain(0, 0, true);
 
@@ -555,6 +557,11 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     //  PCC_Pair index (because you cant transition from self to self)
     std::vector<std::tuple<Point3, Point3, unsigned int> > chainPositions;
 
+    //the point representing any position (and thus a no-op move)
+    //TODO - should be semi-formalized probably
+    //  and not just 0,0,0 but whatever
+    Point3 anyPos = Point3();
+
     //TODO - PROBLEM IN HERE
     //  HOW TO HANDLE THE NOOP CHAINS?
     //  THE POINTS THAT ARE ALL ZERO
@@ -562,16 +569,16 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     for(unsigned int i = 0; i < resolvedPrecomputeChainPairs.size(); i++){
         const PreComputeChain& pcc = resolvedPrecomputeChainPairs[i];
         auto t = std::tuple<Point3, Point3, unsigned int>(
-            clm.getChainStartPoint(pcc.c1),
-            clm.getChainStartPoint(pcc.c2),
+            ((pcc.c1.getChainLength() != 0) ? clm.getChainStartPoint(pcc.c1) : anyPos),
+            ((pcc.c2.getChainLength() != 0) ? clm.getChainStartPoint(pcc.c2) : anyPos),
             i
         );
 
         chainPositions.push_back(t);
 
         t = std::tuple<Point3, Point3, unsigned int>(
-            clm.getChainEndPoint(pcc.c1),
-            clm.getChainEndPoint(pcc.c2),
+            ((pcc.c1.getChainLength() != 0) ? clm.getChainEndPoint(pcc.c1) : anyPos),
+            ((pcc.c2.getChainLength() != 0) ? clm.getChainEndPoint(pcc.c2) : anyPos),
             i
         );
 
@@ -585,6 +592,9 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     //  PCC_pair transition end index
     std::priority_queue<std::tuple<unsigned int, unsigned int, unsigned int> >
         transitionsPQ;
+
+    //TODO - should re-work this to the lazy evaluation method used
+    //  in the phase 1
 
     //for some position pair starting at i and ending at j
     //  calculate the cost to transition from i to j
@@ -601,7 +611,7 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
 
             //TODO
             //calculate the transition time for this pair
-            int transitionTime = 0;
+            int transitionTime = 1;
 
             auto t = std::tuple<unsigned int, unsigned int, unsigned int>(
                 transitionTime, i, j
@@ -632,6 +642,10 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
         }
 
         while(true){
+            if(transitionsPQ.size() == 0){
+                throw std::runtime_error("Transitions pq empty prematurely\n");
+            }
+
             auto t = transitionsPQ.top();
             transitionsPQ.pop();
 
@@ -652,11 +666,31 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
             poisitionsBitset.set(transition_start);
             poisitionsBitset.set(transition_end);
             totalTransitionsTime += std::get<0>(t);
+            
+            break;
         }
     }
 
+    //now compute the total path-print time
+    unsigned int pathPrintTime = 0;
+    for(auto pcc : resolvedPrecomputeChainPairs){
+        pathPrintTime += pcc.amountPrinted;
+    }
+
+    unsigned int totalTime = pathPrintTime + totalTransitionsTime;
+    unsigned int baseTime = clm.getNumPrintSegmentsInLayer();
+
     //debug info
+    std::cout << "Total Print Time: " << pathPrintTime << std::endl;
     std::cout << "Total Transitions Time: " << totalTransitionsTime << std::endl;
+    std::cout << "Total Time: " << totalTime << std::endl;
+
+    std::cout << "Base Print Time: " << baseTime  << std::endl;
+    printf("Efficiency: %.3f (Optimal = 2)\n", double(baseTime)/totalTime);
+    printf("Time %%: %.3f%% (Optimal = 50%%)\n", double(totalTime*100)/(baseTime));
+    // printf("Speedup %%: %.3f%% (Optimal = 100%%)\n", 
+    //     double((baseTime-totalTime)*100)/baseTime
+    // );
 
 
     //debug check that the resulting path is
