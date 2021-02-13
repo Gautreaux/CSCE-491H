@@ -8,6 +8,11 @@ layerSampleSet/*
 .vs/*
 __pycache__/*
 
+Debug/*
+x64/*
+research-code.*
+callgrind.*
+
 *.o
 *.exe
 
