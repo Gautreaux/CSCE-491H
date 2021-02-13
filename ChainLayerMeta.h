@@ -25,8 +25,11 @@ protected:
     // tranlate a layer index to proper GCP index
     std::vector<unsigned int> segmentTranslation;
 
-    // total print segments
+    // total print segments in layer
     unsigned int totalPrintSegments;
+
+    // total segments in layer
+    unsigned int totalSegments;
 
     //ref to the GCP
     const GCodeParser& gcp;
@@ -105,6 +108,9 @@ public:
     inline unsigned int getNumChainsInLayer(void) const {return chains.size();}
     inline unsigned int getNumPrintSegmentsInLayer(void) const {
         return totalPrintSegments;
+    }
+    inline unsigned int getNumSegmentsInLayer(void) const {
+        return totalSegments;
     }
 
 //DEBUG functions

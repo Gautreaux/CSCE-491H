@@ -9,13 +9,39 @@
 void ChainStar::doRecompute(const GCodeParser& gcp){
     assert(gcp.isValid());
 
+    unsigned int newTimeSum = 0;
+    unsigned int baseTimeSum = 0;
+    unsigned int rawTimeSum = 0;
+    unsigned int newBaseSum = 0;
+    unsigned int layersRun = 0;
+
     for(const double layer : gcp.getLayerVecRef()){
         //TODO - some return type stuff here?
-        doRecomputeLayer(gcp, layer);
+        LayerResults r = doRecomputeLayer(gcp, layer);
+
+        newTimeSum += std::get<0>(r);
+        baseTimeSum += std::get<1>(r);
+        rawTimeSum += std::get<2>(r);
+        newBaseSum += std::get<3>(r);
+
+        layersRun++;
 #ifdef SINGLE_LAYER_ONLY
         break;
 #endif
     }
+
+    printf("Ran %u layers\n", layersRun);
+    printf("Total new time: %u\n", newTimeSum);
+    printf("Total base time: %u\n", baseTimeSum);
+    printf("Total raw time: %u\n", rawTimeSum);
+    printf("Total new base: %u\n", newBaseSum);
+
+    printf("Efficiency base/new base: %.3f (Optimal = 2)\n",
+        double(baseTimeSum)/newBaseSum);
+    printf("Efficiency base/ new total: %.3f (Optimal = 2)\n",
+        double(baseTimeSum)/newTimeSum);
+    printf("Efficiency raw/ new total: %.3f (Optimal > 2)\n",
+        double(rawTimeSum)/newTimeSum);
 }
 
 //TODO - this should be in the ChainLayerMeta scope?
@@ -32,7 +58,7 @@ unsigned int resolveChainAgentB(const Chain& chain){
     return chain.getChainLength();
 }
 
-void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
+LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     const ChainLayerMeta clm(gcp, zLayer);
     const int numberSegmentsInLayer = clm.getNumPrintSegmentsInLayer();
 
@@ -349,12 +375,7 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     // in practice its a little more complicated
 
     //stores all the positions of chains that we need to deal with
-    //TODO - tuple into a struct
-    //tuple ordering
-    //  chain 1 position
-    //  chain 2 position
-    //  PCC_Pair index (because you cant transition from self to self)
-    std::vector<std::tuple<Point3, Point3, unsigned int> > chainPositions;
+    std::vector<PositionPair> chainPositions;
 
     //the point representing any position (and thus a no-op move)
     //TODO - should be semi-formalized probably
@@ -367,7 +388,7 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     //now we need to add the endpoints to that set
     for(unsigned int i = 0; i < resolvedPrecomputeChainPairs.size(); i++){
         const PreComputeChain& pcc = resolvedPrecomputeChainPairs[i];
-        auto t = std::tuple<Point3, Point3, unsigned int>(
+        auto t = PositionPair(
             ((pcc.c1.getChainLength() != 0) ? clm.getChainStartPoint(pcc.c1) : anyPos),
             ((pcc.c2.getChainLength() != 0) ? clm.getChainStartPoint(pcc.c2) : anyPos),
             i
@@ -375,7 +396,7 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
 
         chainPositions.push_back(t);
 
-        t = std::tuple<Point3, Point3, unsigned int>(
+        t = PositionPair(
             ((pcc.c1.getChainLength() != 0) ? clm.getChainEndPoint(pcc.c1) : anyPos),
             ((pcc.c2.getChainLength() != 0) ? clm.getChainEndPoint(pcc.c2) : anyPos),
             i
@@ -384,13 +405,8 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
         chainPositions.push_back(t);
     }
 
-    //TODO - tuple into struct
-    //tuple ordering
-    //  transition cost
-    //  PCC_pair transition start index
-    //  PCC_pair transition end index
-    std::priority_queue<std::tuple<unsigned int, unsigned int, unsigned int> >
-        transitionsPQ;
+    //stores the resolved transitions
+    std::priority_queue<ResolvedTransition> transitionsPQ;
 
     //TODO - should re-work this to the lazy evaluation method used
     //  in the phase 1
@@ -412,9 +428,7 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
             //calculate the transition time for this pair
             int transitionTime = 1;
 
-            auto t = std::tuple<unsigned int, unsigned int, unsigned int>(
-                transitionTime, i, j
-            );
+            auto t = ResolvedTransition(transitionTime, i, j);
             transitionsPQ.push(t);
         }
     }
@@ -478,6 +492,7 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
 
     unsigned int totalTime = pathPrintTime + totalTransitionsTime;
     unsigned int baseTime = clm.getNumPrintSegmentsInLayer();
+    unsigned int rawTime = clm.getNumSegmentsInLayer();
 
     //debug info
     std::cout << "Total Print Time: " << pathPrintTime << std::endl;
@@ -487,6 +502,11 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     std::cout << "Base Print Time: " << baseTime  << std::endl;
     printf("Efficiency: %.3f (Optimal = 2)\n", double(baseTime)/totalTime);
     printf("Time %%: %.3f%% (Optimal = 50%%)\n", double(totalTime*100)/(baseTime));
+
+    std::cout << "Raw Print Time: " << rawTime << std::endl;
+    printf("Efficiency: %.3f (Optimal = 2)\n", double(rawTime)/totalTime);
+    printf("Time %%: %.3f%% (Optimal = 50%%)\n", double(totalTime*100)/(rawTime));
+
     // printf("Speedup %%: %.3f%% (Optimal = 100%%)\n", 
     //     double((baseTime-totalTime)*100)/baseTime
     // );
@@ -497,4 +517,7 @@ void ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
     // 2. covers, with no extra segments, the original path
 
     //finally export to a reasonable representation
+
+    //and return the values
+    return LayerResults(totalTime, baseTime, rawTime, pathPrintTime);
 }

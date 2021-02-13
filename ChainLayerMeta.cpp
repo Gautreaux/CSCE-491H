@@ -96,7 +96,8 @@ void ChainLayerMeta::doAllChainsCheck(void) const {
 
 
 ChainLayerMeta::ChainLayerMeta(const GCodeParser& gcp, const double layer) :
-    chains(), segmentTranslation(), totalPrintSegments(0), gcp(gcp), zLayer(layer)
+    chains(), segmentTranslation(), totalPrintSegments(0), totalSegments(0),
+    gcp(gcp), zLayer(layer)
 {
     const unsigned int layerStartIndex = gcp.getLayerStartIndex(layer);
     const unsigned int layerEndIndex = gcp.getLayerEndIndex(layer);
@@ -106,6 +107,7 @@ ChainLayerMeta::ChainLayerMeta(const GCodeParser& gcp, const double layer) :
 
     //loop over the print segments, adding chains as necessary
     for(auto i = layerStartIndex; i <= layerEndIndex; i++){
+        totalSegments++;
         if(gcp.at(i).isPrintSegment()){
             //update data about this being a print structure
             totalPrintSegments++;
