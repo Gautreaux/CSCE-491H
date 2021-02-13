@@ -70,12 +70,12 @@ public:
     }
 
     inline Point3 getChainStartPoint(const Chain& chain) const {
-        const GCodeSegment& seg = gcp.at(chain.getStartIndex());
+        const GCodeSegment& seg = gcp.at(segmentTranslation.at(chain.getStartIndex()));
         return ((chain.isForward()) ? seg.getStartPoint() : seg.getEndPoint());
     }
 
     inline Point3 getChainEndPoint(const Chain& chain) const {
-        const GCodeSegment& seg = gcp.at(chain.getEndIndex());
+        const GCodeSegment& seg = gcp.at(segmentTranslation.at(chain.getEndIndex()));
         return ((chain.isForward()) ? seg.getEndPoint() : seg.getStartPoint());
     }
 
@@ -100,7 +100,35 @@ public:
         return canAgentBPrintSegment(gcp.at(segmentTranslation.at(i)));
     }
 
-    // unsigned int getPenaltyForTime()
+    //return true iff A1 can move/print ls1 concurrently with A2 printing ls2
+    //  may be printing while moving too
+    inline bool canMoveSegmentPair(const LineSegment& ls1, 
+        const LineSegment& ls2) const 
+    {
+        return ls1.minSeperationDistance(ls2) >= CHAIN_MIN_SEPERATION_MM;
+    }
+
+    //return true if the A1 position and the A2 position can be held concurrently
+    inline bool isValidPositionPair(const Point3& a1Pos, const Point3& a2Pos) const
+    {
+        return getPointDistance(a1Pos, a2Pos) >= CHAIN_MIN_SEPERATION_MM;
+    }
+
+    //return true if A2 can hold the A2 pos while A1 travels the A1Seg
+    //  not necessarily symmetric with the other
+    inline bool isValidSegmentPosition(const LineSegment& a1Seg, 
+        const Point3& a2Pos) const
+    {
+        return a1Seg.minSeperationDistance(a2Pos) >= CHAIN_MIN_SEPERATION_MM;
+    }
+
+    //return true if A1 can hold the A1 pos while A2 travels the a2Seg
+    //  not necessarily symmetric with the other
+    inline bool isValidSegmentPosition(const Point3& a1Pos,
+        const LineSegment& a2Seg) const
+    {
+        return a2Seg.minSeperationDistance(a1Pos) >= CHAIN_MIN_SEPERATION_MM;
+    }
 
 //accessors
 

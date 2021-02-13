@@ -45,6 +45,13 @@ protected:
     //run recompute on the specific layer
     LayerResults doRecomputeLayer(const GCodeParser& gcp, const double zLayer);
 
+    //determine the total transition time for the agents
+    //  assumes that a1 transitions between a1p1 and a1p2 but 
+    //  does not assume that a1p1 is the start of the transition
+    //  same is true for a2
+    unsigned int getTransitionTime(const Point3& a1p1, const Point3& a1p2,
+        const Point3& a2p1, const Point3& a2p2, const ChainLayerMeta& clm) const;
+
 public:
     ChainStar(){};
 

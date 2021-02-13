@@ -58,7 +58,83 @@ unsigned int resolveChainAgentB(const Chain& chain){
     return chain.getChainLength();
 }
 
+#define INVALID_TRANSITION -1u
+
+unsigned int ChainStar::getTransitionTime(const Point3& a1p1,
+    const Point3& a1p2, const Point3& a2p1, const Point3& a2p2,
+    const ChainLayerMeta& clm) const 
+{
+    return 1;
+    //TODO - get transition time need a potentially massive overhaul
+    if( (a1p1 == Point3::ANY || a1p2 == Point3::ANY) &&
+        (a2p1 == Point3::ANY || a2p2 == Point3::ANY)
+    ){
+        //a special case where both a1 and a2 both have free choice
+        // in theory, both or operations are x-or true
+        // however, since we already treat an any position as free
+        // this transition must be a completely free one
+        
+        //however this brings about a problem where now we 
+        //  are potentially massive underestimating the time
+        //  and by collapsing the minimum transitions,
+        //      this transition will always be chosen
+        //  so we just call this an invalid transition and return
+        //      the maximum 
+        // TODO - should probably be an exception
+        return INVALID_TRANSITION;
+    }
+    if((a1p1 == Point3::ANY || a1p2 == Point3::ANY)){
+        //we know that both of the a2 positions are fixed
+        //and again we treat any as 0-cost
+        //so we treat this as a free movement w.r.t a1
+        //and only worry about the a2 time
+        //again, possibly underestimating but not a big deal
+        double d = getPointDistance(a2p1, a2p2);
+        d /= CHAIN_MIN_SEPERATION_MM;
+        return (std::ceil(d));
+    }
+    if((a2p1 == Point3::ANY || a2p2 == Point3::ANY)){
+        //same comments as above apply here
+        double d = getPointDistance(a1p1, a1p2);
+        d /= CHAIN_MIN_SEPERATION_MM;
+        return (std::ceil(d));
+    }
+
+    //now begin the process of actually computing the transition time
+
+    //create the two underlying segments
+    LineSegment a1Seg(a1p1, a1p2);
+    LineSegment a2Seg(a2p1, a2p2);
+
+    if(clm.canMoveSegmentPair(a1Seg, a2Seg)){
+        double d = std::max(a1Seg.length(), a2Seg.length());
+        d /= CHAIN_MIN_SEPERATION_MM;
+        return (std::ceil(d));
+    }
+
+    //try no-oping one while the other moves
+    //  then no-oping the other while the first moves
+    //may overestimate the time required
+    //TODO
+    
+
+    //the final operation:
+    //  we know that the positions pairs are valid
+    //  so there exists some transition that makes this work, somehow
+    //  we can approximate this by
+    //      move one agent, 1 segment out of the way
+    //      move the second agent to its new position
+    //      move the first agent back to its starting position (1 cost)
+    //      move the first agent to its new position
+    return (std::ceil(a1Seg.length()) + std::ceil(a2Seg.length()) + 2);
+}
+
 LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
+#ifdef DEBUG
+    printf("Starting layer z=%.3f\n", zLayer);
+#endif
+
+
     const ChainLayerMeta clm(gcp, zLayer);
     const int numberSegmentsInLayer = clm.getNumPrintSegmentsInLayer();
 
@@ -221,9 +297,11 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
             reductionRounds++;
 
             //log info about the progression
-            printf("Reduction round %u: added %u*2 segments, total %u/%u, pending: %lu\n", 
+            printf("Reduction round %u: added %u*2 segments, total %u/%u, "
+                    "pending: %lu, %lu\n", 
                 reductionRounds, pcc.amountPrinted, currentPrinted.getSetCount(),
-                clm.getNumPrintSegmentsInLayer(), cachedChainPairsPQ.size()
+                clm.getNumPrintSegmentsInLayer(), cachedChainPairsPQ.size(),
+                consideredChains.size()
             );
 
             //construct a new pcc with only printed chains
@@ -380,7 +458,7 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
     //the point representing any position (and thus a no-op move)
     //TODO - should be semi-formalized probably
     //  and not just 0,0,0 but whatever
-    Point3 anyPos = Point3();
+    Point3 anyPos = Point3::ANY;
 
     //TODO - PROBLEM IN HERE
     //  HOW TO HANDLE THE NOOP CHAINS?
@@ -394,6 +472,11 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
             i
         );
 
+#ifdef DEBUG
+        assert(std::get<0>(t).getZ() == zLayer || std::get<0>(t).getZ() == Point3::ANY.getZ());
+        assert(std::get<1>(t).getZ() == zLayer || std::get<1>(t).getZ() == Point3::ANY.getZ());
+#endif
+
         chainPositions.push_back(t);
 
         t = PositionPair(
@@ -401,6 +484,11 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
             ((pcc.c2.getChainLength() != 0) ? clm.getChainEndPoint(pcc.c2) : anyPos),
             i
         );
+
+#ifdef DEBUG
+        assert(std::get<0>(t).getZ() == zLayer || std::get<0>(t).getZ() == Point3::ANY.getZ());
+        assert(std::get<1>(t).getZ() == zLayer || std::get<1>(t).getZ() == Point3::ANY.getZ());
+#endif
 
         chainPositions.push_back(t);
     }
@@ -424,9 +512,34 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
                 continue;
             }
 
+            auto a1p1 = std::get<0>(chainPositions.at(i));
+            auto a1p2 = std::get<1>(chainPositions.at(i));
+            auto a2p1 = std::get<0>(chainPositions.at(j));
+            auto a2p2 = std::get<1>(chainPositions.at(j));
+
+#ifdef DEBUG
+            // if(
+            //     a1p1 == Point3::ANY ||
+            //     a1p2 == Point3::ANY ||
+            //     a2p1 == Point3::ANY ||
+            //     a2p2 == Point3::ANY
+            // ){
+            //     printf("hello");
+            // }
+#endif
+
             //TODO
             //calculate the transition time for this pair
-            int transitionTime = 1;
+            unsigned int transitionTime = getTransitionTime(
+                a1p1, a1p2, a2p1, a2p2, clm
+            );
+
+            //skip these potentially invalid transitions
+            //  this may cause a problem if the number of 
+            //  single agent moves is larger than number of double agent moves
+            if(transitionTime == INVALID_TRANSITION){
+                continue;
+            }
 
             auto t = ResolvedTransition(transitionTime, i, j);
             transitionsPQ.push(t);
@@ -434,7 +547,7 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
     }
 
     //bitset for tracking which positions are (not) used already
-    DynamicBitset poisitionsBitset(chainPositions.size());
+    DynamicBitset positionsBitset(chainPositions.size());
 
     //tracks the total transition time penalty
     unsigned int totalTransitionsTime = 0;
@@ -446,8 +559,8 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
     //  can inject a layer start point to make sure that the 
     //      recomputed layer starts at some location
     //      relatively reasonable to the previous layer's end point
-    while(poisitionsBitset.getUnsetCount() != 2){
-        if(poisitionsBitset.getUnsetCount() < 2){
+    while(positionsBitset.getUnsetCount() != 2){
+        if(positionsBitset.getUnsetCount() < 2){
             //pretty sure this is an error and unreachable
             std::cout << "Warning: reached possibly invalid state:"
                 " <2 unset in transition" << std::endl;
@@ -466,18 +579,18 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
             unsigned int transition_start = std::get<1>(t);
             unsigned int transition_end = std::get<2>(t);
 
-            if(poisitionsBitset.at(transition_start)){
+            if(positionsBitset.at(transition_start)){
                 //the transition's start point was already used
                 continue;
             }
 
-            if(poisitionsBitset.at(transition_end)){
+            if(positionsBitset.at(transition_end)){
                 //the transition's end point was already used
                 continue;
             }
 
-            poisitionsBitset.set(transition_start);
-            poisitionsBitset.set(transition_end);
+            positionsBitset.set(transition_start);
+            positionsBitset.set(transition_end);
             totalTransitionsTime += std::get<0>(t);
             
             break;

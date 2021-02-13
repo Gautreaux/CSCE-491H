@@ -12,7 +12,7 @@ $(EXECUTABLE) : Main.cpp OFiles/FileUtil.o OFiles/GCodeParser.o OFiles/ChainStar
 	$(CC_COMPILE_LINK_EXE_AUTO) -lpthread
 
 # declaring a phony forces the top level to always rebuild
-.PHONY: $(EXECUTABLE) tests
+.PHONY: $(EXECUTABLE) tests clean
 
 all : $(EXECUTABLE) tests
 

@@ -8,13 +8,17 @@ unsigned int ChainLayerMeta::resolveChainPair(const Chain& chainA,
     for(unsigned int i = 0; i < maxLen; i++){
         if(!(canAgentAPrintSegmentIndex(chainA.at(i)) &&
                 canAgentBPrintSegmentIndex(chainB.at(i)))){
+            //one of the two agents cannot print its assigned segment
+            //  so just stop and return
             return i;
         }
 
         if(
-            gcp.at(segmentTranslation.at(chainA.at(i))).minSeperationDistance(
-            gcp.at(segmentTranslation.at(chainB.at(i)))) < CHAIN_MIN_SEPERATION_MM
+            canMoveSegmentPair(gcp.at(segmentTranslation.at(chainA.at(i))),
+            gcp.at(segmentTranslation.at(chainB.at(i)))) == false
         ){
+            //we found the first non-printable
+            //  so return the number of segments printed
             return i;
         }
     }

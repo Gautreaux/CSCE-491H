@@ -2,7 +2,8 @@
 
 #include "../pch.h"
 
-#include "math.h" //for pow, sqrt
+#include <limits> // for numeric_limit
+#include <math.h> //for pow, sqrt
 
 class Point3{
 protected:
@@ -18,6 +19,9 @@ public:
     inline double getX(void) const {return x;}
     inline double getY(void) const {return y;}
     inline double getZ(void) const {return z;}
+
+    //conceptual point representing any point
+    const static Point3 ANY;
 };
 
 inline bool operator==(const Point3& lhs, const Point3& rhs){

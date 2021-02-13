@@ -1,5 +1,11 @@
 #include "Point3.h"
 
+const Point3 Point3::ANY = Point3(
+    std::numeric_limits<double>::lowest(),
+    std::numeric_limits<double>::lowest(),
+    std::numeric_limits<double>::lowest()
+);
+
 Point3::Point3(void) : x(0), y(0), z(0)
 {
 }
