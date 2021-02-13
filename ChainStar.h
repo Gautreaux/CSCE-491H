@@ -11,8 +11,8 @@
 //TODO - make a parameter:
 #define CHAIN_MIN_SEPERATION_MM 25.0
 
-#define SINGLE_LAYER_ONLY
-#warning "Forcing single layer mode"
+// #define SINGLE_LAYER_ONLY
+// #warning "Forcing single layer mode"
 
 //represents a single print chain
 class Chain{

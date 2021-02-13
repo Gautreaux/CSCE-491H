@@ -118,3 +118,6 @@ PQTest2.exe : TestingCode/PQTest2.cpp DynamicBitset.o RecomputeState.o PrunedASt
 # %.o : %.cpp apple
 # 	ECHO "DING DING"
 # 	$(CPP_COMP_COM) $< -c -o $@
+
+#for checking call stacks
+# valgrind --tool=callgrind ./Main gcodeSampleSet/81191.gcode 
