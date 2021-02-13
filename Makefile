@@ -4,11 +4,11 @@ CPPSTD=-std=c++17# which c++ version to use
 
 CPP_COMP_COM=$(CXX) $(CPPFLAGS) $(CPPSTD)
 CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c -Wall -o $@ $<
-CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -Wall -o $@ $< *.o
+CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -Wall -o $@ $< OFiles/*.o
 
 EXECUTABLE=Main
 
-$(EXECUTABLE) : Main.cpp FileUtil.o GCodeParser.o ChainStar.o
+$(EXECUTABLE) : Main.cpp OFiles/FileUtil.o OFiles/GCodeParser.o OFiles/ChainStar.o
 	$(CC_COMPILE_LINK_EXE_AUTO) -lpthread
 
 # declaring a phony forces the top level to always rebuild
@@ -21,6 +21,7 @@ force : clean $(EXECUTABLE)
 clean :
 	rm -f *.o
 	rm -f $(EXECUTABLE)
+	rm -f OFiles/*.o
 
 release : clean
 	make CPPFLAGS=-Ofast
@@ -29,77 +30,53 @@ debug : clean
 	make CPPFLAGS=-g
 
 # geometry files 
-GCodeParser.o : GCodeParser.cpp GCodeParser.h GCodeSegment.o Point3.o pch.o
+OFiles/GCodeParser.o : GCodeParser.cpp GCodeParser.h OFiles/GCodeSegment.o OFiles/Point3.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-GCodeSegment.o : GCodeSegment.cpp GCodeSegment.h LineSegment.o pch.o
+OFiles/GCodeSegment.o : GCodeSegment.cpp GCodeSegment.h OFiles/LineSegment.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-LineSegment.o : GeometryLib/LineSegment.cpp GeometryLib/LineSegment.h Line.o Point3.o pch.o
+OFiles/LineSegment.o : GeometryLib/LineSegment.cpp GeometryLib/LineSegment.h OFiles/Line.o OFiles/Point3.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-Line.o : GeometryLib/Line.cpp GeometryLib/Line.h Point3.o Vector3.o pch.o
+OFiles/Line.o : GeometryLib/Line.cpp GeometryLib/Line.h OFiles/Point3.o OFiles/Vector3.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-Vector3.o : GeometryLib/Vector3.cpp GeometryLib/Vector3.h Point3.o pch.o
+OFiles/Vector3.o : GeometryLib/Vector3.cpp GeometryLib/Vector3.h OFiles/Point3.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-Point3.o : GeometryLib/Point3.cpp GeometryLib/Point3.h pch.o
+OFiles/Point3.o : GeometryLib/Point3.cpp GeometryLib/Point3.h OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-pch.o : pch.cpp pch.h
+OFiles/pch.o : pch.cpp pch.h
+	mkdir OFiles/ -p
 	$(CC_COMPLIE_NO_LINK_AUTO)
-
-# a* files
-# PrunedAStar.o : PrunedAStar.cpp PrunedAStar.h RecomputeState.o GCodeParser.o BiMap.o LayerManager.o NonReallocVector.o PQWrapper.o pch.o
-# 	$(CC_COMPLIE_NO_LINK_AUTO)
-
-# PrunedAStarV2.o : PrunedAStarV2.cpp PrunedAStarV2.h GCodeParser.o LayerManager.o NonReallocVector.o RecomputeState.o pch.o
-# 	$(CC_COMPLIE_NO_LINK_AUTO)
-
-# PrunedAStarV2BruteForce.o : PrunedAStarV2BruteForce.cpp PrunedAStarV2BruteForce.h PrunedAStarV2.o PQWrapper.o pch.o
-# 	$(CC_COMPLIE_NO_LINK_AUTO)
-
-# PrunedAStarV2SmartBrute.o : PrunedAStarV2SmartBrute.cpp PrunedAStarV2SmartBrute.h PrunedAStarV2BruteForce.o pch.o
-# 	$(CC_COMPLIE_NO_LINK_AUTO)
-
-# RecomputeState.o : RecomputeState.cpp RecomputeState.h DynamicBitset.o Point3.o LayerManager.o pch.o
-# 	$(CC_COMPLIE_NO_LINK_AUTO)
-
-# LayerManager.o : LayerManager.cpp LayerManager.h GCodeParser.o GCodeSegment.o Point3.o BiMap.o pch.o
-# 	$(CC_COMPLIE_NO_LINK_AUTO)
-
-# PQWrapper.o : PQWrapper.cpp PQWrapper.h RecomputeState.o pch.o
-# 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # chain* files
-ChainStar.o : ChainStar.cpp ChainStar.h DynamicBitset.o GCodeParser.o ChainStarHelper.o ChainLayerMeta.o pch.o
+OFiles/ChainStar.o : ChainStar.cpp ChainStar.h OFiles/DynamicBitset.o OFiles/GCodeParser.o OFiles/ChainStarHelper.o OFiles/ChainLayerMeta.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-ChainStarHelper.o : ChainStarHelper.cpp ChainStarHelper.h pch.o
+OFiles/ChainStarHelper.o : ChainStarHelper.cpp ChainStarHelper.h OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-ChainLayerMeta.o : ChainLayerMeta.cpp ChainLayerMeta.h pch.o
+OFiles/ChainLayerMeta.o : ChainLayerMeta.cpp ChainLayerMeta.h OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # util files
-DynamicBitset.o : UtilLib/DynamicBitset.cpp UtilLib/DynamicBitset.h pch.o
+OFiles/DynamicBitset.o : UtilLib/DynamicBitset.cpp UtilLib/DynamicBitset.h OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-BiMap.o : UtilLib/BiMap.cpp UtilLib/BiMap.h pch.o
+OFiles/BiMap.o : UtilLib/BiMap.cpp UtilLib/BiMap.h OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-NonReallocVector.o : UtilLib/NonReallocVector.cpp UtilLib/NonReallocVector.h pch.o
+OFiles/NonReallocVector.o : UtilLib/NonReallocVector.cpp UtilLib/NonReallocVector.h OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-FileUtil.o : UtilLib/FileUtil.cpp UtilLib/FileUtil.h pch.o
+OFiles/FileUtil.o : UtilLib/FileUtil.cpp UtilLib/FileUtil.h OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-ThreadsafeIntGen.o : UtilLib/ThreadsafeIntGen.cpp UtilLib/ThreadsafeIntGen.h pch.o
+OFiles/ThreadsafeIntGen.o : UtilLib/ThreadsafeIntGen.cpp UtilLib/ThreadsafeIntGen.h OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
-
-# ThreadingContents.o : ThreadingContents.cpp ThreadingContents.h GCodeParser.o LayerManager.o ThreadsafeIntGen.o pch.o
-# 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # testing files
 test : tests
@@ -107,10 +84,10 @@ tests : PQTest.exe
 	PQTest.exe > test.txt
 	python CheckPopPush.py
 
-PQTest.exe : TestingCode/PQTest.cpp DynamicBitset.o RecomputeState.o PrunedAStar.o Pch.o
+PQTest.exe : TestingCode/PQTest.cpp OFiles/DynamicBitset.o OFiles/RecomputeState.o OFiles/PrunedAStar.o OFiles/Pch.o
 	$(CC_COMPILE_LINK_EXE_AUTO)
 
-PQTest2.exe : TestingCode/PQTest2.cpp DynamicBitset.o RecomputeState.o PrunedAStar.o Pch.o
+PQTest2.exe : TestingCode/PQTest2.cpp OFiles/DynamicBitset.o OFiles/RecomputeState.o OFiles/PrunedAStar.o OFiles/Pch.o
 	$(CC_COMPILE_LINK_EXE_AUTO)
 
 
