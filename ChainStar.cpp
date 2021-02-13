@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <functional>
 #include <set>
+#include <ctime>
 #include <tuple>
 #include <queue>
 
@@ -14,6 +15,8 @@ void ChainStar::doRecompute(const GCodeParser& gcp){
     unsigned int rawTimeSum = 0;
     unsigned int newBaseSum = 0;
     unsigned int layersRun = 0;
+
+    clock_t startTime = clock();
 
     for(const double layer : gcp.getLayerVecRef()){
         //TODO - some return type stuff here?
@@ -29,6 +32,9 @@ void ChainStar::doRecompute(const GCodeParser& gcp){
         break;
 #endif
     }
+
+    clock_t endTime = clock();
+    printf("Recompute duration (s): %.3f\n", double(endTime-startTime)/CLOCKS_PER_SEC);
 
     printf("Ran %u layers\n", layersRun);
     printf("Total new time: %u\n", newTimeSum);
@@ -130,10 +136,8 @@ unsigned int ChainStar::getTransitionTime(const Point3& a1p1,
 }
 
 LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
-#ifdef DEBUG
-    printf("Starting layer z=%.3f\n", zLayer);
-#endif
 
+    printf("Starting layer z=%.3f\n", zLayer);
 
     const ChainLayerMeta clm(gcp, zLayer);
     const int numberSegmentsInLayer = clm.getNumPrintSegmentsInLayer();

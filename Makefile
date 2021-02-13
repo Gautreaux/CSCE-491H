@@ -104,3 +104,6 @@ PQTest2.exe : TestingCode/PQTest2.cpp OFiles/DynamicBitset.o OFiles/RecomputeSta
 
 #for checking call stacks
 # valgrind --tool=callgrind ./Main gcodeSampleSet/81191.gcode 
+
+#for running a batch
+# python3 batchRunner.py -d gcodeSampleSet/ -o sampleRes/
