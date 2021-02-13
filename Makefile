@@ -73,7 +73,13 @@ pch.o : pch.cpp pch.h
 # 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # chain* files
-ChainStar.o : ChainStar.cpp ChainStar.h DynamicBitset.o GCodeParser.o pch.o
+ChainStar.o : ChainStar.cpp ChainStar.h DynamicBitset.o GCodeParser.o ChainStarHelper.o ChainLayerMeta.o pch.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+ChainStarHelper.o : ChainStarHelper.cpp ChainStarHelper.h pch.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+ChainLayerMeta.o : ChainLayerMeta.cpp ChainLayerMeta.h pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # util files
