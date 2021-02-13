@@ -3,8 +3,6 @@
 #include <iostream>
 
 #include "GCodeParser.h"
-#include "PrunedAStarV2SmartBrute.h"
-#include "ThreadingContents.h"
 #include "UtilLib/FileUtil.h"
 
 #include "ChainStar.h"
@@ -163,34 +161,36 @@ int main(int argc, char ** argv){
 
         //number of threads to spawn
         //  should become a command line parameter
-        unsigned int numThreads = DEFAULT_THREAD_COUNT;
+        // unsigned int numThreads = DEFAULT_THREAD_COUNT;
 #ifdef FORCE_SINGLE_THREAD
         numThreads = 1;
 #endif
-        if(numThreads > 500){
-            printf("NumThreads seems extremely high: %u\n", numThreads);
-            exit(2);
-        }
+        // if(numThreads > 500){
+        //     printf("NumThreads seems extremely high: %u\n", numThreads);
+        //     exit(2);
+        // }
 
-        // generator for which files to process
-        ThreadsafeIntGen gen;
+        printf("WARNING: threading behavior not yet supported.\n");
 
-        //create the thread parameters
-        // CommonThreadParameters CTP(&gen, &files, p.path_str.c_str(), "Reports/GenericReport");
-        CommonThreadParameters CTP(&gen, &files, p.path_str.c_str(), "Reports/PointsReport");
+        // // generator for which files to process
+        // ThreadsafeIntGen gen;
+
+        // //create the thread parameters
+        // // CommonThreadParameters CTP(&gen, &files, p.path_str.c_str(), "Reports/GenericReport");
+        // CommonThreadParameters CTP(&gen, &files, p.path_str.c_str(), "Reports/PointsReport");
 
 
-        std::vector<std::thread> threads;
-        threads.push_back(std::thread(reportingFunction, &CTP));
-        for(unsigned int i = 0; i < numThreads; i++){
-            threads.push_back(std::thread(threadFunction, i, &CTP));
-        }
-        printf("All threads created\n");
-        for(auto& thread : threads){
-            //will block on the reporting thread before the worker threads
-            thread.join();
-        }
+        // std::vector<std::thread> threads;
+        // threads.push_back(std::thread(reportingFunction, &CTP));
+        // for(unsigned int i = 0; i < numThreads; i++){
+        //     threads.push_back(std::thread(threadFunction, i, &CTP));
+        // }
+        // printf("All threads created\n");
+        // for(auto& thread : threads){
+        //     //will block on the reporting thread before the worker threads
+        //     thread.join();
+        // }
 
-        printf("All threads joined, %u files (%llu bytes) processed\n", CTP.totalProcessed.load(), CTP.totalBytesValid.load());
+        // printf("All threads joined, %u files (%llu bytes) processed\n", CTP.totalProcessed.load(), CTP.totalBytesValid.load());
     }
 }

@@ -8,7 +8,7 @@ CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -Wall -o $@ $< *.o
 
 EXECUTABLE=Main
 
-$(EXECUTABLE) : Main.cpp FileUtil.o GCodeParser.o PrunedAStarV2SmartBrute.o ChainStar.o ThreadingContents.o
+$(EXECUTABLE) : Main.cpp FileUtil.o GCodeParser.o ChainStar.o
 	$(CC_COMPILE_LINK_EXE_AUTO) -lpthread
 
 # declaring a phony forces the top level to always rebuild
@@ -54,23 +54,23 @@ pch.o : pch.cpp pch.h
 # PrunedAStar.o : PrunedAStar.cpp PrunedAStar.h RecomputeState.o GCodeParser.o BiMap.o LayerManager.o NonReallocVector.o PQWrapper.o pch.o
 # 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-PrunedAStarV2.o : PrunedAStarV2.cpp PrunedAStarV2.h GCodeParser.o LayerManager.o NonReallocVector.o RecomputeState.o pch.o
-	$(CC_COMPLIE_NO_LINK_AUTO)
+# PrunedAStarV2.o : PrunedAStarV2.cpp PrunedAStarV2.h GCodeParser.o LayerManager.o NonReallocVector.o RecomputeState.o pch.o
+# 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-PrunedAStarV2BruteForce.o : PrunedAStarV2BruteForce.cpp PrunedAStarV2BruteForce.h PrunedAStarV2.o PQWrapper.o pch.o
-	$(CC_COMPLIE_NO_LINK_AUTO)
+# PrunedAStarV2BruteForce.o : PrunedAStarV2BruteForce.cpp PrunedAStarV2BruteForce.h PrunedAStarV2.o PQWrapper.o pch.o
+# 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-PrunedAStarV2SmartBrute.o : PrunedAStarV2SmartBrute.cpp PrunedAStarV2SmartBrute.h PrunedAStarV2BruteForce.o pch.o
-	$(CC_COMPLIE_NO_LINK_AUTO)
+# PrunedAStarV2SmartBrute.o : PrunedAStarV2SmartBrute.cpp PrunedAStarV2SmartBrute.h PrunedAStarV2BruteForce.o pch.o
+# 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-RecomputeState.o : RecomputeState.cpp RecomputeState.h DynamicBitset.o Point3.o LayerManager.o pch.o
-	$(CC_COMPLIE_NO_LINK_AUTO)
+# RecomputeState.o : RecomputeState.cpp RecomputeState.h DynamicBitset.o Point3.o LayerManager.o pch.o
+# 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-LayerManager.o : LayerManager.cpp LayerManager.h GCodeParser.o GCodeSegment.o Point3.o BiMap.o pch.o
-	$(CC_COMPLIE_NO_LINK_AUTO)
+# LayerManager.o : LayerManager.cpp LayerManager.h GCodeParser.o GCodeSegment.o Point3.o BiMap.o pch.o
+# 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-PQWrapper.o : PQWrapper.cpp PQWrapper.h RecomputeState.o pch.o
-	$(CC_COMPLIE_NO_LINK_AUTO)
+# PQWrapper.o : PQWrapper.cpp PQWrapper.h RecomputeState.o pch.o
+# 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # chain* files
 ChainStar.o : ChainStar.cpp ChainStar.h DynamicBitset.o GCodeParser.o pch.o
@@ -92,8 +92,8 @@ FileUtil.o : UtilLib/FileUtil.cpp UtilLib/FileUtil.h pch.o
 ThreadsafeIntGen.o : UtilLib/ThreadsafeIntGen.cpp UtilLib/ThreadsafeIntGen.h pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-ThreadingContents.o : ThreadingContents.cpp ThreadingContents.h GCodeParser.o LayerManager.o ThreadsafeIntGen.o pch.o
-	$(CC_COMPLIE_NO_LINK_AUTO)
+# ThreadingContents.o : ThreadingContents.cpp ThreadingContents.h GCodeParser.o LayerManager.o ThreadsafeIntGen.o pch.o
+# 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # testing files
 test : tests
