@@ -114,10 +114,13 @@ if __name__ == "__main__":
             except StopIteration:
                 pass
 
-        print(f"Running with {filesCompleted} completed, {filesToProcess} remaining.")
-        mb = round(bytesCompleted/(1000*1000), 3)
-        es = round(time()-startTime)
-        print(f"\tProcessed {mb} MB")
-        print(f"\tElapsed time {es}s")
-        print(f"Approx Processing Rate {round(mb/es, 3)} MB/s")
+        try:
+            print(f"Running with {filesCompleted} completed, {filesToProcess} remaining.")
+            mb = round(bytesCompleted/(1000*1000), 3)
+            es = round(time()-startTime)
+            print(f"\tProcessed {mb} MB")
+            print(f"\tElapsed time {es}s")
+            print(f"Approx Processing Rate {round(mb/es, 3)} MB/s")
+        except ZeroDivisionError:
+            pass
         sleep(5)
