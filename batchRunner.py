@@ -113,13 +113,11 @@ if __name__ == "__main__":
                     processes[i] = subprocess.Popen(["./Main", fpath], stdout=fileHandles[i])
             except StopIteration:
                 pass
-        try:
-            print(f"Running with {filesCompleted} completed, {filesToProcess} remaining.")
-            mb = round(bytesCompleted/(1000*1000), 3)
-            es = round(time()-startTime)
-            print(f"\tProcessed {mb} MB")
-            print(f"\tElapsed time {es}s")
-            print(f"Approx Processing Rate {round(mb/es, 3)} MB/s")
-        except ZeroDivisionError:
-            pass
+
+        print(f"Running with {filesCompleted} completed, {filesToProcess} remaining.")
+        mb = round(bytesCompleted/(1000*1000), 3)
+        es = round(time()-startTime)
+        print(f"\tProcessed {mb} MB")
+        print(f"\tElapsed time {es}s")
+        print(f"Approx Processing Rate {round(mb/es, 3)} MB/s")
         sleep(5)
