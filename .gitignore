@@ -15,6 +15,7 @@ callgrind.*
 
 *.o
 *.exe
+*.log
 
 ~$*
 test.txt
