@@ -1,5 +1,6 @@
 
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 
 from GraphicsGenerators.gcodeParser import GCodeSegment, ParseResult
 from typing import List
@@ -38,3 +39,48 @@ def colorLayer(parseResult : ParseResult, name = ''):
         plt.title(f"{name}    z = {zLayer}")
         plt.show()
 
+
+def colorChains(parseResult : ParseResult, name = ''):
+    for layerGenerator in parseResult.layerGeneratorGenerator():
+        layerSegs : List[GCodeSegment] = list(layerGenerator)
+        print(f"{len(layerSegs)} z={layerSegs[0].startPos[2]}")
+
+        printSegs = [seg for seg in layerSegs if seg.isPrint()]
+
+        zLayer = layerSegs[0].startPos[2]
+
+        lines = list(map(lambda x: ((x.startPos[0], x.endPos[0]), (x.startPos[1], x.endPos[1])), printSegs))
+        
+        colors = []
+        inChain = False
+        thisColor = None
+        def colorGenerator():
+            while(True):
+                for e in mcolors.TABLEAU_COLORS:
+                    yield e
+
+        colorGen = colorGenerator()
+        
+        for seg in layerSegs:
+            if seg.isPrint() is False:
+                inChain = False
+            else:
+                if inChain is False:
+                    thisColor = next(colorGen)
+                    inChain = True
+                colors.append(thisColor)
+
+        assert(len(colors) == len(lines))
+        
+
+        plt.figure()
+        for ((x,y),c) in zip(lines, colors):
+            # print(f"{x} {y} {c}")
+            plt.plot(x,y,color=c)
+        ax = plt.gcf().gca()
+
+        plt.title(f"{name}    z = {zLayer}")
+        
+        ax.set_aspect('equal', adjustable='box')
+
+        plt.show()

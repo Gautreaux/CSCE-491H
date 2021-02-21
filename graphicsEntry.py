@@ -1,7 +1,7 @@
 
 import sys 
 from GraphicsGenerators.gcodeParser import gcodePathParser
-from GraphicsGenerators.layerColorer import colorLayer
+from GraphicsGenerators.layerColorer import *
 
 print("Hello")
 
@@ -25,3 +25,4 @@ print(f"Z layers: {layers}")
 name = sys.argv[2].split('/')[-1]
 
 colorLayer(parseResult, name)
+# colorChains(parseResult, name)
