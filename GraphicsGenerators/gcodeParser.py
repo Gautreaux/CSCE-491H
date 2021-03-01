@@ -1,7 +1,14 @@
 # code for parsing a gcode file
 from abc import ABC, abstractmethod
 
-from gcodeSegment import gcodeSegment
+class GCodeSegment:
+    def __init__(self, startPos, endPos, printAmt) -> None:
+        self.startPos = startPos
+        self.endPos = endPos
+        self.printAmt = printAmt
+
+    def isPrint(self) -> bool:
+        return self.printAmt != None
 
 # any derived class must be multi-threaded/multi-processed safe
 class gcodeParserGeneric(ABC):
@@ -199,7 +206,7 @@ class gcodePathParser(gcodeParserGeneric):
             printAmt = None
 
         #create
-        thisSegment =  gcodeSegment(self.pos, newPos, printAmt)
+        thisSegment =  GCodeSegment(self.pos, newPos, printAmt)
 
         self.output.segList.append(thisSegment)
 
@@ -284,7 +291,7 @@ class ParseResult():
         self.layerSkipList = {}
 
         def getZ(seg):
-            return seg.point[2]
+            return seg.startPos[2]
 
         ctr = 0
         segLen = len(self.segList)
