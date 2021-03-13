@@ -302,30 +302,6 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
             break;
         }
 
-        if(chainSourceIter != chainSourceEnd){
-            //there exists more source chains we can pull from
-            //  to attempt to find more pairs
-            //expand five per iteration
-            //  Results: this prevents the crash,
-            //      but for some the chain pool grows very large
-            //      this is a problem because then the n^2 effects take hold
-            //  Summary: ok quick fix, but something better is needed long term
-            //  TODO ^
-            //  This problem generally occurs on small files
-            //  that are approximately the same size as the min collision distance
-            //      i.e.: bounding box is ~30mm and the collision distance is 25mm
-            unsigned short ctr = 0;
-            while((chainSourceIter != chainSourceEnd) &&
-                (ctr++ < 5))
-            {
-                consideredChains.insert(*chainSourceIter);
-                chainSourceIter++;
-            }        
-            continue;
-        }
-
-        //all source chains considered: no pairs possible
-        //  so time to start winding down and exiting
         if(validPCC){
             const DynamicBitset dbsMask = clm.preComputeChainAsBitMask(pcc);
 
@@ -358,6 +334,31 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
             resolvedPrecomputeChainPairs.push_back(pcc_new);
             continue;
         }
+
+        if(chainSourceIter != chainSourceEnd){
+            //there exists more source chains we can pull from
+            //  to attempt to find more pairs
+            //expand five per iteration
+            //  Results: this prevents the crash,
+            //      but for some the chain pool grows very large
+            //      this is a problem because then the n^2 effects take hold
+            //  Summary: ok quick fix, but something better is needed long term
+            //  TODO ^
+            //  This problem generally occurs on small files
+            //  that are approximately the same size as the min collision distance
+            //      i.e.: bounding box is ~30mm and the collision distance is 25mm
+            unsigned short ctr = 0;
+            while((chainSourceIter != chainSourceEnd) &&
+                (ctr++ < 5))
+            {
+                consideredChains.insert(*chainSourceIter);
+                chainSourceIter++;
+            }        
+            continue;
+        }
+
+        //all source chains considered: no pairs possible
+        //  so time to start winding down and exiting
 
         //this is a non-valid pcc,
 #ifdef DEBUG //some debug checking and printing
