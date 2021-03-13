@@ -13,6 +13,7 @@ if __name__ == "__main__":
     parser.add_argument('-f', nargs=1, help="run on the specified file")
     parser.add_argument('-t', nargs=1, help="number of threads to spawn, pass negative number for native cores - argument", default=cpu_count())
     parser.add_argument('-o', nargs=1, help="Output directory, if not present, use -d value", default=None)
+    parser.add_argument('-l', nargs=1, help="Process only the files that match the provided name list", default=None)
     args = parser.parse_args()
     
     if(args.d is None and args.f is None):
@@ -53,6 +54,19 @@ if __name__ == "__main__":
     if(os.path.isdir(args.o[0]) is False):
         print("Error: provided output directory is not directory")
         exit(1)        
+
+    if(args.l is None):
+        whitelist = None
+    else:
+        whitelist = []
+        with open(args.l[0], 'r') as whitelistFile:
+            for line in whitelistFile:
+                whitelist.append(line.strip())
+        print(f"Whitelist resolved {len(whitelist)} files.")
+
+        if(len(whitelist) == 0):
+            print("No whitelist files provided, exiting.")
+            exit(0)
         
     print(f"Running with {args.t} threads.")
     print(f"Core count is {cpu_count()}.")
@@ -61,6 +75,11 @@ if __name__ == "__main__":
             f[-len('.gcode'):] == ".gcode"]
 
     print(f"Found {len(filesList)} files in directory.")
+
+    if(whitelist is not None):
+        filesList = [f for f in filesList if f in whitelist]
+        print(f"Applied whitelist, reduced file size to {len(filesList)}")
+    
 
     processes = [None]*args.t
     pendingSizes = [None]*args.t

@@ -53,6 +53,12 @@ public:
     }
 };
 
+inline bool operator==(const Chain& c1, const Chain& c2){
+    return ((c1.getStartIndex() == c2.getStartIndex()) && 
+            (c1.getChainLength() == c2.getChainLength()) &&
+            (c1.getDirection() == c2.getDirection()));
+}
+
 struct PreComputeChain{
 public:
     Chain c1;

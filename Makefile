@@ -107,3 +107,4 @@ PQTest2.exe : TestingCode/PQTest2.cpp OFiles/DynamicBitset.o OFiles/RecomputeSta
 
 #for running a batch
 # python3 batchRunner.py -d gcodeSampleSet/ -o sampleRes/
+# python3 -u batchRunner.py -d /mnt/r/ -o /mnt/q/ | tee batch.log

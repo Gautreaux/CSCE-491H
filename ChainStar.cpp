@@ -246,13 +246,25 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
         // auto eIter = consideredChains.upper_bound(testC);
         // consideredChains.erase(consideredChains.begin(), eIter);
 
+        //TODO - move cached pairs and copy back in the ones that are still relevant
+        //  This **should** provide performance improvement, but should check
+
         //ensure that all current chains have the collision-ness computed
         for(const Chain& chain1 : consideredChains){
             for(const Chain& chain2 : consideredChains){
+                if(chain1 == chain2){
+                    continue;
+                }
+
                 std::pair<Chain, Chain> chainPair(chain1, chain2);
                 if(cachedChainPairs.find(chainPair) == cachedChainPairs.end()){
                     //this is a new chain pair, do the compute
                     const unsigned int i = clm.resolveChainPair(chainPair);
+                    if (i == 0)
+                    {
+                        //dont bother pushing the empty pairings into the set
+                        continue;
+                    }
                     PreComputeChain pcc(chain1, chain2, i);
                     cachedChainPairsPQ.push(pcc);
                 }
@@ -287,6 +299,30 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
             break;
         }
 
+        if(chainSourceIter != chainSourceEnd){
+            //there exists more source chains we can pull from
+            //  to attempt to find more pairs
+            //expand five per iteration
+            //  Results: this prevents the crash,
+            //      but for some the chain pool grows very large
+            //      this is a problem because then the n^2 effects take hold
+            //  Summary: ok quick fix, but something better is needed long term
+            //  TODO ^
+            //  This problem generally occurs on small files
+            //  that are approximately the same size as the min collision distance
+            //      i.e.: bounding box is ~30mm and the collision distance is 25mm
+            unsigned short ctr = 0;
+            while((chainSourceIter != chainSourceEnd) &&
+                (ctr++ < 5))
+            {
+                consideredChains.insert(*chainSourceIter);
+                chainSourceIter++;
+            }        
+            continue;
+        }
+
+        //all source chains considered: no pairs possible
+        //  so time to start winding down and exiting
         if(validPCC){
             const DynamicBitset dbsMask = clm.preComputeChainAsBitMask(pcc);
 
