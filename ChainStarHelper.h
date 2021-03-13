@@ -2,12 +2,18 @@
 
 #include "pch.h"
 
+//forward declaration for reasons
+class Chain;
+inline bool operator==(const Chain& c1, const Chain& c2);
+
 //represents a single print chain
 class Chain{
 public:    
 //subclasses
     enum class Direction {FORWARD, BACKWARD};
-
+    
+    //the chain representing this agent takes no operations
+    static const Chain noopChain;
 protected:
 //data members
 
@@ -36,6 +42,10 @@ public:
         return ((traversalDirection == Direction::FORWARD) ?
             startIndex + chainLength - 1 : startIndex - chainLength + 1
         );
+    }
+
+    inline bool isNoopChain(void) const {
+        return *this == Chain::noopChain;
     }
 
 

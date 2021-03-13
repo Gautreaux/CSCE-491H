@@ -25,6 +25,7 @@ private:
     //data members
     unsigned char errorFlags; //bitflags of error conditions
     unsigned int fileSize;
+    std::string filePath;
     std::vector<GCodeSegment> originalSegmentsList;
     std::vector<GCodeSegment> segmentsList; 
     std::vector<double> zLayers; // set of zLayers with print elements
@@ -87,7 +88,6 @@ public:
     bool inline tooLargeError(void) const {return readErrorBit(ErrorTypes::FILE_TOO_LARGE);}
     operator bool() const {return isValid();}
 
-    inline unsigned int getFileSize(void) const {return fileSize;}
 
     //iterators and access
     const GCodeSegment& at(unsigned int i) const;
@@ -108,6 +108,10 @@ public:
 
     unsigned int getLayerOrigStartIndex(double zLayerTarget, unsigned int hint = 0) const;
     unsigned int getLayerOrigEndIndex(double zLayerTarger, unsigned int hint = -1) const;
+
+    // general accessors
+    inline unsigned int getFileSize(void) const {return fileSize;}
+    inline const std::string& getFilePath(void) const {return filePath;}
 };
 
 template <class Functor>

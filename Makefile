@@ -53,7 +53,10 @@ OFiles/pch.o : pch.cpp pch.h
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # chain* files
-OFiles/ChainStar.o : ChainStar.cpp ChainStar.h OFiles/DynamicBitset.o OFiles/GCodeParser.o OFiles/ChainStarHelper.o OFiles/ChainLayerMeta.o OFiles/pch.o
+OFiles/ChainStar.o : ChainStar.cpp ChainStar.h OFiles/DynamicBitset.o OFiles/GCodeParser.o OFiles/ChainStarHelper.o OFiles/ChainStarLog.o OFiles/ChainLayerMeta.o OFiles/pch.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+OFiles/ChainStarLog.o : ChainStarLog.cpp ChainStarLog.h OFiles/ChainStarHelper.o OFiles/ChainLayerMeta.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 OFiles/ChainStarHelper.o : ChainStarHelper.cpp ChainStarHelper.h OFiles/pch.o

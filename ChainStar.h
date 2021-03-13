@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "ChainStarHelper.h"
+#include "ChainStarLog.h"
 #include "ChainLayerMeta.h"
 #include "UtilLib/DynamicBitset.h"
 #include "GCodeParser.h"

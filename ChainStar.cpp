@@ -249,6 +249,9 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
         //TODO - move cached pairs and copy back in the ones that are still relevant
         //  This **should** provide performance improvement, but should check
 
+        //TODO - remove
+        std::cout << "Starting chain collision checks w/ size: " << consideredChains.size() << std::endl; 
+
         //ensure that all current chains have the collision-ness computed
         for(const Chain& chain1 : consideredChains){
             for(const Chain& chain2 : consideredChains){
@@ -418,9 +421,6 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
 
         printf("%lu unmatched sub chains.\n", consideredChains.size()/2);
 
-        //TODO - push final chains for full coverages
-        Chain noopChain(0, 0, true);
-
         while(currentPrinted.getUnsetCount() > 0){
             if(consideredChains.size() == 0){
                 throw std::runtime_error(
@@ -442,7 +442,7 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
 
             //TODO - check which agent(s) can print this chain
 
-            PreComputeChain pccNew(c, noopChain, c.getChainLength());
+            PreComputeChain pccNew(c, Chain::noopChain, c.getChainLength());
             currentPrinted = currentPrinted | dbs; // TODO - overload |=
             resolvedPrecomputeChainPairs.push_back(pccNew);
         }
@@ -480,6 +480,10 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
         throw std::runtime_error("Error in pre-phase 2 checks, unprinted segments\n");
     }
     std::cout << "Passed pre-phase 2 checks." << std::endl;
+
+    //TODO - comment this out at some point
+    std::cout << "Dumping the partial chains to a file" << std::endl;
+    dumpChainPairsToFile(gcp.getFilePath(), resolvedPrecomputeChainPairs, clm, zLayer);
 
     //now link partial chains together in an efficient way
     //  start with the set of all chains

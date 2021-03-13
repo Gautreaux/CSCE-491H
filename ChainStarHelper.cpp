@@ -63,3 +63,5 @@ std::ostream& operator<<(std::ostream& os, const Chain& c){
 
     return os;
 }
+
+const Chain Chain::noopChain(0, 0, true);
