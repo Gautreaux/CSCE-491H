@@ -11,10 +11,13 @@ EXECUTABLE=Main
 $(EXECUTABLE) : Main.cpp OFiles/FileUtil.o OFiles/GCodeParser.o OFiles/ChainStar.o
 	$(CC_COMPILE_LINK_EXE_AUTO) -lpthread
 
-# declaring a phony forces the top level to always rebuild
-.PHONY: $(EXECUTABLE) tests clean
+ChainLinkerTesting : ChainLinkerTesting.cpp OFiles/LineSegment.o
+	$(CC_COMPILE_LINK_EXE_AUTO)
 
-all : $(EXECUTABLE) tests
+# declaring a phony forces the top level to always rebuild
+.PHONY: $(EXECUTABLE) tests clean ChainLinkerTesting
+
+all : $(EXECUTABLE) ChainLinkerTesting
 
 force : clean $(EXECUTABLE)
 
@@ -22,6 +25,7 @@ clean :
 	rm -f *.o
 	rm -f $(EXECUTABLE)
 	rm -f OFiles/*.o
+	rm -f ChainLinkerTesting
 
 release : clean
 	make CPPFLAGS=-Ofast
