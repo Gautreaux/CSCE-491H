@@ -11,12 +11,16 @@
 #include <time.h>
 
 #include "GeometryLib/LineSegment.h"
+#include "ChainLayerMeta.h"
 
 using namespace std;
 
 using TupleType = tuple<unsigned int, unsigned int, unsigned int>;
 
 const string filePath = "81191.0.350000.chaindump";
+
+const GCodeParser GCP("gcodeSampleSet/81191.gcode");
+const ChainLayerMeta CLM_Global(GCP, 0.35);
 
 Point3 readSomePoint(ifstream& is){
     char c;
@@ -141,8 +145,10 @@ int main(int argc, char** argv){
         stateList.push_back(s1);
         stateList.push_back(s2);
 
+#ifdef DEBUG
         cout << "Added new state: " << s1 << endl;
         cout << "Added new state: " << s2 << endl;
+#endif
 
         //stats
         numChainPairs++;
@@ -177,8 +183,10 @@ int main(int argc, char** argv){
 
         auto& t = pq.top();
         const auto transitionTime = -std::get<0>(t);
+#ifdef DEBUG
         const auto state1Index = -std::get<1>(t);
         const auto state2Index = -std::get<2>(t);
+#endif
         State& state1 = stateList.at(-std::get<1>(t));
         State& state2 = stateList.at(-std::get<2>(t));
         pq.pop();
@@ -195,8 +203,10 @@ int main(int argc, char** argv){
 
         statesUsed += 2;
 
+#ifdef DEBUG
         cout << "Linking states " << state1Index << " " << state2Index << endl;
         cout << "Partners: " << state1.partnerIndex << " " << state2.partnerIndex << endl;
+#endif
 
         State& state1Partner = stateList.at(state1.partnerIndex);
         State& state2Partner = stateList.at(state2.partnerIndex);
@@ -230,12 +240,14 @@ int main(int argc, char** argv){
     }
     
     assert(unusedStateIndexes.size() == 2);
-    cout << "Unused state indexes: " << unusedStateIndexes[0] << " " << unusedStateIndexes[1] << endl;
 
     State& s1 = stateList[unusedStateIndexes[0]];
     State& s2 = stateList[unusedStateIndexes[1]];
 
+#ifdef DEBUG
+    cout << "Unused state indexes: " << unusedStateIndexes[0] << " " << unusedStateIndexes[1] << endl;
     cout << "Partner indexes: " << s1.partnerIndex << " " << s2.partnerIndex << endl;
+#endif
 
     assert(s1.partnerIndex == unusedStateIndexes[1]);
     assert(s2.partnerIndex == unusedStateIndexes[0]);

@@ -11,7 +11,7 @@ EXECUTABLE=Main
 $(EXECUTABLE) : Main.cpp OFiles/FileUtil.o OFiles/GCodeParser.o OFiles/ChainStar.o
 	$(CC_COMPILE_LINK_EXE_AUTO) -lpthread
 
-ChainLinkerTesting : ChainLinkerTesting.cpp OFiles/LineSegment.o
+ChainLinkerTesting : ChainLinkerTesting.cpp OFiles/LineSegment.o OFiles/ChainLayerMeta.o
 	$(CC_COMPILE_LINK_EXE_AUTO)
 
 # declaring a phony forces the top level to always rebuild
@@ -66,7 +66,7 @@ OFiles/ChainStarLog.o : ChainStarLog.cpp ChainStarLog.h OFiles/ChainStarHelper.o
 OFiles/ChainStarHelper.o : ChainStarHelper.cpp ChainStarHelper.h OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-OFiles/ChainLayerMeta.o : ChainLayerMeta.cpp ChainLayerMeta.h OFiles/pch.o
+OFiles/ChainLayerMeta.o : ChainLayerMeta.cpp ChainLayerMeta.h OFiles/pch.o OFiles/GCodeParser.o OFiles/DynamicBitset.o OFiles/ChainStarHelper.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # util files
