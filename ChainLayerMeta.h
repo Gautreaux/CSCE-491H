@@ -8,7 +8,7 @@
 
 #include "ChainStarHelper.h"
 #include "UtilLib/DynamicBitset.h"
-#include "GCodeParser.h"
+#include "GCodeLib/GCodeParser.h"
 
 typedef std::vector<Chain> ChainList;
 typedef std::pair<unsigned int, unsigned int> UIntPair;

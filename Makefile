@@ -34,10 +34,10 @@ debug : clean
 	make CPPFLAGS=-g
 
 # geometry files 
-OFiles/GCodeParser.o : GCodeParser.cpp GCodeParser.h OFiles/GCodeSegment.o OFiles/Point3.o OFiles/pch.o
+OFiles/GCodeParser.o : GCodeLib/GCodeParser.cpp GCodeLib/GCodeParser.h OFiles/GCodeSegment.o OFiles/Point3.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-OFiles/GCodeSegment.o : GCodeSegment.cpp GCodeSegment.h OFiles/LineSegment.o OFiles/pch.o
+OFiles/GCodeSegment.o : GCodeLib/GCodeSegment.cpp GCodeLib/GCodeSegment.h OFiles/LineSegment.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 OFiles/LineSegment.o : GeometryLib/LineSegment.cpp GeometryLib/LineSegment.h OFiles/Line.o OFiles/Point3.o OFiles/pch.o

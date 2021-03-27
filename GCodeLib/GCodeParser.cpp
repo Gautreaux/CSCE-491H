@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "GCodeParser.h"
-#include "pch.h"
+#include "../pch.h"
 
 GCodeParser::GCodeParser(const std::string filePath) : errorFlags(0), fileSize(0), filePath(filePath) {
     // setup the object

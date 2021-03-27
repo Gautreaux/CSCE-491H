@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "GCodeParser.h"
+#include "GCodeLib/GCodeParser.h"
 #include "UtilLib/FileUtil.h"
 
 #include "ChainStar.h"

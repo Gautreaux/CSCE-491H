@@ -3,10 +3,10 @@
 #include <string>
 #include <vector>
 
-#include "pch.h"
+#include "../pch.h"
 
 #include "GCodeSegment.h"
-#include "GeometryLib/Point3.h"
+#include "../GeometryLib/Point3.h"
 
 typedef std::vector<GCodeSegment>::const_iterator SegmentIterator;
 typedef std::vector<double>::const_iterator LayerIterator;

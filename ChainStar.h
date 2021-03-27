@@ -9,7 +9,7 @@
 #include "ChainStarLog.h"
 #include "ChainLayerMeta.h"
 #include "UtilLib/DynamicBitset.h"
-#include "GCodeParser.h"
+#include "GCodeLib/GCodeParser.h"
 
 
 // #define SINGLE_LAYER_ONLY

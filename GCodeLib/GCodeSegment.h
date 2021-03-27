@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pch.h"
+#include "../pch.h"
 
-#include "GeometryLib/LineSegment.h"
+#include "../GeometryLib/LineSegment.h"
 
 class GCodeSegment : public LineSegment{
 private:
