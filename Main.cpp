@@ -4,7 +4,6 @@
 
 #include "GCodeLib/GCodeParser.h"
 #include "UtilLib/FileUtil.h"
-#include "RecomputeFrameworks.h"
 
 #include "ChainStar.h"
 
@@ -143,7 +142,7 @@ int main(int argc, char ** argv){
         // clm.doAllPairsCheck();
         // clm.doAllChainsCheck();
         ChainStar cs;
-        cs.doRecompute(gcp);
+        cs.doRecompute(gcp, ChainStar::RecomputeMode::THEORETICAL);
     }
     else
     {

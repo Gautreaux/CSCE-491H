@@ -11,6 +11,8 @@
 #include "UtilLib/DynamicBitset.h"
 #include "GCodeLib/GCodeParser.h"
 
+#include "RecomputeFrameworks.h"
+
 
 // #define SINGLE_LAYER_ONLY
 // #warning "Forcing single layer mode"
@@ -43,10 +45,14 @@ typedef std::tuple<unsigned int, unsigned int, unsigned int, unsigned int>
 
 //manages the recomputing of a file
 class ChainStar{
-protected:
 
+public:
+//subclasses
+    enum class RecomputeMode {THEORETICAL, CODEX, CURRENT};
+
+protected:
     //run recompute on the specific layer
-    LayerResults doRecomputeLayer(const GCodeParser& gcp, const double zLayer);
+    LayerResults doRecomputeLayer(const GCodeParser& gcp, const double zLayer, const RecomputeMode mode);
 
     //determine the total transition time for the agents
     //  assumes that a1 transitions between a1p1 and a1p2 but 
@@ -65,10 +71,13 @@ protected:
     );
 
 public:
+
+//constructors
     ChainStar(){};
 
+//methods
     //recompute on the provided GCP file
     //  define pre-processor flag 'SINGLE_LAYER_ONLY' to run just the first layer
     //TODO - return type?
-    void doRecompute(const GCodeParser& gcp);
+    void doRecompute(const GCodeParser& gcp, const RecomputeMode mode);
 };

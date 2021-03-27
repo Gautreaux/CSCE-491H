@@ -8,7 +8,7 @@ CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -Wall -o $@ $< OFiles/*.o
 
 EXECUTABLE=Main
 
-$(EXECUTABLE) : Main.cpp OFiles/FileUtil.o OFiles/GCodeParser.o OFiles/ChainStar.o OFiles/RecomputeFrameworks.o
+$(EXECUTABLE) : Main.cpp OFiles/FileUtil.o OFiles/GCodeParser.o OFiles/ChainStar.o
 	$(CC_COMPILE_LINK_EXE_AUTO) -lpthread
 
 ChainLinkerTesting : ChainLinkerTesting.cpp OFiles/LineSegment.o OFiles/ChainLayerMeta.o
@@ -32,9 +32,6 @@ release : clean
 
 debug : clean
 	make CPPFLAGS=-g
-
-OFiles/RecomputeFrameworks.o : RecomputeFrameworks.cpp RecomputeFrameworks.h OFiles/ChainLayerMeta.o OFiles/pch.o
-	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # geometry files 
 OFiles/GCodeParser.o : GCodeLib/GCodeParser.cpp GCodeLib/GCodeParser.h OFiles/GCodeSegment.o OFiles/Point3.o OFiles/pch.o
@@ -60,7 +57,7 @@ OFiles/pch.o : pch.cpp pch.h
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # chain* files
-OFiles/ChainStar.o : ChainStar.cpp ChainStar.h OFiles/DynamicBitset.o OFiles/GCodeParser.o OFiles/ChainStarHelper.o OFiles/ChainStarLog.o OFiles/ChainLayerMeta.o OFiles/pch.o
+OFiles/ChainStar.o : ChainStar.cpp ChainStar.h OFiles/DynamicBitset.o OFiles/GCodeParser.o OFiles/ChainStarHelper.o OFiles/ChainStarLog.o OFiles/ChainLayerMeta.o OFiles/RecomputeFrameworks.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 OFiles/ChainStarLog.o : ChainStarLog.cpp ChainStarLog.h OFiles/ChainStarHelper.o OFiles/ChainLayerMeta.o OFiles/pch.o
@@ -70,6 +67,9 @@ OFiles/ChainStarHelper.o : ChainStarHelper.cpp ChainStarHelper.h OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 OFiles/ChainLayerMeta.o : ChainLayerMeta.cpp ChainLayerMeta.h OFiles/pch.o OFiles/GCodeParser.o OFiles/DynamicBitset.o OFiles/ChainStarHelper.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+OFiles/RecomputeFrameworks.o : RecomputeFrameworks.cpp RecomputeFrameworks.h OFiles/ChainLayerMeta.o OFiles/GCodeParser.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # util files

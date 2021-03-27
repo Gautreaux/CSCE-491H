@@ -7,7 +7,7 @@
 #include <tuple>
 #include <queue>
 
-void ChainStar::doRecompute(const GCodeParser& gcp){
+void ChainStar::doRecompute(const GCodeParser& gcp, const RecomputeMode mode){
     assert(gcp.isValid());
 
     unsigned int newTimeSum = 0;
@@ -20,7 +20,7 @@ void ChainStar::doRecompute(const GCodeParser& gcp){
 
     for(const double layer : gcp.getLayerVecRef()){
         //TODO - some return type stuff here?
-        LayerResults r = doRecomputeLayer(gcp, layer);
+        LayerResults r = doRecomputeLayer(gcp, layer, mode);
 
         newTimeSum += std::get<0>(r);
         baseTimeSum += std::get<1>(r);
@@ -52,6 +52,7 @@ void ChainStar::doRecompute(const GCodeParser& gcp){
 
 #define INVALID_TRANSITION -1u
 
+//TODO - move into ChainLayerMeta
 unsigned int ChainStar::getTransitionTime(const Point3& a1p1,
     const Point3& a1p2, const Point3& a2p1, const Point3& a2p2,
     const ChainLayerMeta& clm) const 
@@ -463,11 +464,22 @@ void ChainStar::doPhase1LayerRecompute(
     } // while(True)
 }
 
-LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
+LayerResults ChainStar::doRecomputeLayer(
+    const GCodeParser &gcp, const double zLayer,
+    const RecomputeMode mode)
+{
 
     printf("Starting layer z=%.3f\n", zLayer);
 
-    const ChainLayerMeta clm(gcp, zLayer);
+    // If-else if-else but inline for const qualification
+    const ChainLayerMeta clm = (
+        (mode == RecomputeMode::THEORETICAL) ? 
+            ((ChainLayerMeta)TheoreticalModel(gcp, zLayer)) :
+            ((mode == RecomputeMode::CODEX) ?
+                ((ChainLayerMeta)CODEXModel(gcp,zLayer)) :
+                ((ChainLayerMeta)CurrentModel(gcp,zLayer))
+            )
+    );
 
     //stores the pairs for the precompute chain that are resolved
     std::vector<PreComputeChain> resolvedPrecomputeChainPairs;
