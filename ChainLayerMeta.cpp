@@ -15,7 +15,7 @@ unsigned int ChainLayerMeta::resolveChainPair(const Chain& chainA,
 
         if(
             canMoveSegmentPair(gcp.at(segmentTranslation.at(chainA.at(i))),
-            gcp.at(segmentTranslation.at(chainB.at(i)))) == false
+            gcp.at(segmentTranslation.at(chainB.at(i))), true, true) == false
         ){
             //we found the first non-printable
             //  so return the number of segments printed

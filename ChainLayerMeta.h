@@ -103,7 +103,9 @@ public:
     //return true iff A1 can move/print ls1 concurrently with A2 printing ls2
     //  may be printing while moving too
     inline bool canMoveSegmentPair(const LineSegment& ls1, 
-        const LineSegment& ls2) const 
+        const LineSegment& ls2, 
+        const bool ls1IsPrint = false, 
+        const bool ls2IsPrint = false) const 
     {
         return ls1.minSeperationDistance(ls2) >= CHAIN_MIN_SEPERATION_MM;
     }

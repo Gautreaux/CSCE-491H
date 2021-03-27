@@ -16,7 +16,9 @@
 // #warning "Forcing single layer mode"
 
 //used to prevent wasting time on a bunch of small chains
+#ifndef CONCURRENT_CONSIDERATIONS_TARGET
 #define CONCURRENT_CONSIDERATIONS_TARGET 100
+#endif
 
 
 //tuple ordering
@@ -52,6 +54,15 @@ protected:
     //  same is true for a2
     unsigned int getTransitionTime(const Point3& a1p1, const Point3& a1p2,
         const Point3& a2p1, const Point3& a2p2, const ChainLayerMeta& clm) const;
+
+    //do the phase 1 layer recompute:
+    //  Matching segment chains together into pairs
+    //      using CLM functions to determine if the chains can be concurrent
+    //      specifically, the resolveChainPairs function
+    void doPhase1LayerRecompute(
+        std::vector<PreComputeChain>& resolvedPrecomputeChainPairs,
+        const ChainLayerMeta& clm
+    );
 
 public:
     ChainStar(){};

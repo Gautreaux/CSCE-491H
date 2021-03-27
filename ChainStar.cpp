@@ -135,11 +135,10 @@ unsigned int ChainStar::getTransitionTime(const Point3& a1p1,
     return (std::ceil(a1Seg.length()) + std::ceil(a2Seg.length()) + 2);
 }
 
-LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
-
-    printf("Starting layer z=%.3f\n", zLayer);
-
-    const ChainLayerMeta clm(gcp, zLayer);
+void ChainStar::doPhase1LayerRecompute(
+    std::vector<PreComputeChain> &resolvedPrecomputeChainPairs,
+    const ChainLayerMeta &clm)
+{
     const int numberSegmentsInLayer = clm.getNumPrintSegmentsInLayer();
 
     //tracks which segments are currently printed
@@ -161,41 +160,46 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
     auto chainSourceIter = clm.getChainListRef().rbegin();
     auto chainSourceEnd = clm.getChainListRef().rend();
 
-    //stores the pairs for the precompute chain that are resolved
-    std::vector<PreComputeChain> resolvedPrecomputeChainPairs;
-
-    while(true){
-        if(currentPrinted.getUnsetCount() == 0){
+    while (true)
+    {
+        if (currentPrinted.getUnsetCount() == 0)
+        {
             //we have pathed the whole layer
             break;
         }
 
         //backfill the concurrent considerations
-        while((chainSourceIter != chainSourceEnd) &&
-                (consideredChains.size() < CONCURRENT_CONSIDERATIONS_TARGET))
+        while ((chainSourceIter != chainSourceEnd) &&
+               (consideredChains.size() < CONCURRENT_CONSIDERATIONS_TARGET))
         {
             consideredChains.insert(*chainSourceIter);
             chainSourceIter++;
-        }        
-        
-        if(currentPrinted.getSetCount() == 0){
+        }
+
+        if (currentPrinted.getSetCount() == 0)
+        {
             //first iteration, all chains are pending
             //do nothing
         }
-        else{
+        else
+        {
             //cut down the pending chains for anything that overlaps
             const std::set<Chain> oldChains = std::move(consideredChains);
 
-            for(const Chain& oldChain : oldChains){
+            for (const Chain &oldChain : oldChains)
+            {
                 // create the new chain(s) of portions that do not
                 //  include any already-printed stuff
                 // remove any chains from the set
                 DynamicBitset dbsMask = clm.chainAsBitMask(oldChain);
-                DynamicBitset dbsAND = (dbsMask & currentPrinted); 
-                if(dbsAND.getSetCount() == 0){
+                DynamicBitset dbsAND = (dbsMask & currentPrinted);
+                if (dbsAND.getSetCount() == 0)
+                {
                     //no overlap in the chain and dbsMask
                     consideredChains.insert(oldChain);
-                }else{
+                }
+                else
+                {
                     //do not reinsert since no longer considered
                     //see if new remainder chains are formed
                     bool inRemainderRun = false;
@@ -204,32 +208,40 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
 
                     unsigned int start = oldChain.getStartIndex();
                     unsigned int end = oldChain.getEndIndex();
-                    if(end < start) {std::swap(start, end);}
-                    for(unsigned int i = start; i <= end; i++){
-                        if(currentPrinted.at(i) == false){
-                            if(inRemainderRun == false){
+                    if (end < start)
+                    {
+                        std::swap(start, end);
+                    }
+                    for (unsigned int i = start; i <= end; i++)
+                    {
+                        if (currentPrinted.at(i) == false)
+                        {
+                            if (inRemainderRun == false)
+                            {
                                 inRemainderRun = true;
                                 runStart = i;
                             }
                             runLen++;
-                        }else{
-                            if(inRemainderRun){
+                        }
+                        else
+                        {
+                            if (inRemainderRun)
+                            {
                                 Chain c(runStart, runLen, true);
                                 consideredChains.insert(c);
                                 consideredChains.insert(
-                                    Chain(c.getEndIndex(), runLen, false)
-                                );
+                                    Chain(c.getEndIndex(), runLen, false));
                                 inRemainderRun = false;
                                 runLen = 0;
                             }
                         }
                     }
-                    if(inRemainderRun){
+                    if (inRemainderRun)
+                    {
                         Chain c(runStart, runLen, true);
                         consideredChains.insert(c);
                         consideredChains.insert(
-                            Chain(c.getEndIndex(), runLen, false)
-                        );
+                            Chain(c.getEndIndex(), runLen, false));
                     }
                 }
             }
@@ -238,19 +250,20 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
         //TODO - move cached pairs and copy back in the ones that are still relevant
         //  This **should** provide performance improvement, but should check
 
-        //TODO - remove
-        std::cout << "Starting chain collision checks w/ size: " << consideredChains.size() << std::endl; 
-
         //ensure that all current chains have the collision-ness computed
         //  NOTE: chain printing concurrency is potentially not symmetric
-        for(const Chain& chain1 : consideredChains){
-            for(const Chain& chain2 : consideredChains){
-                if(chain1 == chain2){
+        for (const Chain &chain1 : consideredChains)
+        {
+            for (const Chain &chain2 : consideredChains)
+            {
+                if (chain1 == chain2)
+                {
                     continue;
                 }
 
                 std::pair<Chain, Chain> chainPair(chain1, chain2);
-                if(cachedChainPairs.find(chainPair) == cachedChainPairs.end()){
+                if (cachedChainPairs.find(chainPair) == cachedChainPairs.end())
+                {
                     //this is a new chain pair, do the compute
                     const unsigned int i = clm.resolveChainPair(chainPair);
                     if (i == 0)
@@ -266,7 +279,8 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
 
         PreComputeChain pcc;
         bool validPCC = false;
-        while(cachedChainPairsPQ.size() > 0){
+        while (cachedChainPairsPQ.size() > 0)
+        {
             pcc = cachedChainPairsPQ.top();
             cachedChainPairsPQ.pop();
             std::pair<Chain, Chain> chainPair(pcc.c1, pcc.c2);
@@ -276,13 +290,16 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
             //check if this is still a valid-pre cache
             //  no need to add the new segments, as
             //      the old chains loop above will take care of it
-            if(consideredChains.find(pcc.c1) == consideredChains.end()){
+            if (consideredChains.find(pcc.c1) == consideredChains.end())
+            {
                 continue;
             }
-            if(consideredChains.find(pcc.c2) == consideredChains.end()){
+            if (consideredChains.find(pcc.c2) == consideredChains.end())
+            {
                 continue;
             }
-            if(pcc.amountPrinted == 0){
+            if (pcc.amountPrinted == 0)
+            {
                 //this will ultimately terminate into a runtime error
                 //  because we order on amount printed first
                 continue;
@@ -292,12 +309,14 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
             break;
         }
 
-        if(validPCC){
+        if (validPCC)
+        {
             const DynamicBitset dbsMask = clm.preComputeChainAsBitMask(pcc);
 
             //debug check
-            //TODO - remove
+#ifdef DEBUG
             assert((currentPrinted & dbsMask).getSetCount() == 0);
+#endif
 
             //TODO can optimize here if really wanted to
             //  dont construct new bitset & copy, just update in place
@@ -307,25 +326,24 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
 
             //log info about the progression
             printf("Reduction round %u: added %u*2 segments, total %u/%u, "
-                    "pending: %lu, %lu\n", 
-                reductionRounds, pcc.amountPrinted, currentPrinted.getSetCount(),
-                clm.getNumPrintSegmentsInLayer(), cachedChainPairsPQ.size(),
-                consideredChains.size()
-            );
+                   "pending: %lu, %lu\n",
+                   reductionRounds, pcc.amountPrinted, currentPrinted.getSetCount(),
+                   clm.getNumPrintSegmentsInLayer(), cachedChainPairsPQ.size(),
+                   consideredChains.size());
 
             //construct a new pcc with only printed chains
             PreComputeChain pcc_new(
                 Chain(pcc.c1.getStartIndex(), pcc.amountPrinted, pcc.c1.isForward()),
                 Chain(pcc.c2.getStartIndex(), pcc.amountPrinted, pcc.c2.isForward()),
-                pcc.amountPrinted
-            );
+                pcc.amountPrinted);
 
             //store this pre-compute-chain for the second phase
             resolvedPrecomputeChainPairs.push_back(pcc_new);
             continue;
         }
 
-        if(chainSourceIter != chainSourceEnd){
+        if (chainSourceIter != chainSourceEnd)
+        {
             //there exists more source chains we can pull from
             //  to attempt to find more pairs
             //expand five per iteration
@@ -338,12 +356,12 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
             //  that are approximately the same size as the min collision distance
             //      i.e.: bounding box is ~30mm and the collision distance is 25mm
             unsigned short ctr = 0;
-            while((chainSourceIter != chainSourceEnd) &&
-                (ctr++ < 5))
+            while ((chainSourceIter != chainSourceEnd) &&
+                   (ctr++ < 5))
             {
                 consideredChains.insert(*chainSourceIter);
                 chainSourceIter++;
-            }        
+            }
             continue;
         }
 
@@ -354,14 +372,15 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
 #ifdef DEBUG //some debug checking and printing
         printf("All dual move segments resolved.\n");
         printf("Number of printed segments: %u/%u (unprinted: %u)\n",
-            currentPrinted.getSetCount(), clm.getNumPrintSegmentsInLayer(), 
-            currentPrinted.getUnsetCount()
-        );
+               currentPrinted.getSetCount(), clm.getNumPrintSegmentsInLayer(),
+               currentPrinted.getUnsetCount());
         printf("Number of pending chains: %lu\n", consideredChains.size());
 
         unsigned int longestChain = 0;
-        for(const Chain& chain1 : consideredChains){
-            if(chain1.getChainLength() > longestChain){
+        for (const Chain &chain1 : consideredChains)
+        {
+            if (chain1.getChainLength() > longestChain)
+            {
                 longestChain = chain1.getChainLength();
             }
         }
@@ -369,54 +388,68 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
 
         //so lets check one thing: are there really no moves
         unsigned int longestPair = 0;
-        for(const Chain& chain1 : consideredChains){
-            for(const Chain& chain2 : consideredChains){
+        for (const Chain &chain1 : consideredChains)
+        {
+            for (const Chain &chain2 : consideredChains)
+            {
                 unsigned int i = clm.resolveChainPair(chain1, chain2);
-                if(i > longestPair){
+                if (i > longestPair)
+                {
                     longestPair = i;
                 }
             }
         }
         printf("Longest remaining pair: %u\n", longestPair);
 
-        if(chainSourceIter != chainSourceEnd){
+        if (chainSourceIter != chainSourceEnd)
+        {
             printf("WARNING! not all source chains consumed\n");
-        }else{
+        }
+        else
+        {
             printf("All source chains consumed\n");
         }
-        
+
         //check if the following are both true
         //  1. the remaining chains covers all the printed segments
         //  2. the remaining chains do not overlap at all;
         DynamicBitset partialDBS(currentPrinted);
         unsigned int partialSum = 0;
 
-        for(const Chain& chain1 : consideredChains){
+        for (const Chain &chain1 : consideredChains)
+        {
             partialDBS = partialDBS | clm.chainAsBitMask(chain1);
             partialSum += chain1.getChainLength();
         }
 
-        if(partialDBS.getUnsetCount() == 0){
+        if (partialDBS.getUnsetCount() == 0)
+        {
             printf("Remaining chains fully cover layer\n");
-        }else{
+        }
+        else
+        {
             printf("WARNING! remaining chains do not fully cover layer.\n");
         }
 
-        if(partialSum == (partialDBS.getSetCount() - currentPrinted.getSetCount())){
+        if (partialSum == (partialDBS.getSetCount() - currentPrinted.getSetCount()))
+        {
             printf("Remaning chains have no overlap.\n");
-        }else{
-            printf("%u/%u overlap in the remaning chains set.\n", 
-                partialSum, currentPrinted.getUnsetCount());
+        }
+        else
+        {
+            printf("%u/%u overlap in the remaning chains set.\n",
+                   partialSum, currentPrinted.getUnsetCount());
         }
 #endif
 
-        printf("%lu unmatched sub chains.\n", consideredChains.size()/2);
+        printf("%lu unmatched sub chains.\n", consideredChains.size() / 2);
 
-        while(currentPrinted.getUnsetCount() > 0){
-            if(consideredChains.size() == 0){
+        while (currentPrinted.getUnsetCount() > 0)
+        {
+            if (consideredChains.size() == 0)
+            {
                 throw std::runtime_error(
-                        "Could not utilize remainder chains to cover unprinted"
-                );
+                    "Could not utilize remainder chains to cover unprinted");
             }
 
             //since chain is ordered in-order,
@@ -426,7 +459,8 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
             DynamicBitset dbs = clm.chainAsBitMask(c);
 
             //TODO - or sum is more efficient
-            if((dbs & currentPrinted).getSetCount() != 0){
+            if ((dbs & currentPrinted).getSetCount() != 0)
+            {
                 //there was overlap in chain and printed
                 continue;
             }
@@ -441,9 +475,21 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
         //since we now have full coverage:
         break; //would happen at top of loop anyway but whatever
     } // while(True)
+}
 
+LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zLayer){
+
+    printf("Starting layer z=%.3f\n", zLayer);
+
+    const ChainLayerMeta clm(gcp, zLayer);
+
+    //stores the pairs for the precompute chain that are resolved
+    std::vector<PreComputeChain> resolvedPrecomputeChainPairs;
+
+    doPhase1LayerRecompute(resolvedPrecomputeChainPairs, clm);
+
+#ifdef DEBUG
     //debug checking to ensure this is a valid config
-    //TODO - move into a preprocessor block?
     printf("Starting pre-phase 2 checks\n");
     printf("Total chain pairs: %lu\n", resolvedPrecomputeChainPairs.size());
     DynamicBitset debugDBS(clm.getNumPrintSegmentsInLayer());
@@ -471,10 +517,12 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
         throw std::runtime_error("Error in pre-phase 2 checks, unprinted segments\n");
     }
     std::cout << "Passed pre-phase 2 checks." << std::endl;
+#endif //DEBUG
 
-    //TODO - comment this out at some point
+#ifdef DUMP_CHAINS
     std::cout << "Dumping the partial chains to a file" << std::endl;
     dumpChainPairsToFile(gcp.getFilePath(), resolvedPrecomputeChainPairs, clm, zLayer);
+#endif
 
     //now link partial chains together in an efficient way
     //  start with the set of all chains
@@ -551,17 +599,6 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
             auto a1p2 = std::get<1>(chainPositions.at(i));
             auto a2p1 = std::get<0>(chainPositions.at(j));
             auto a2p2 = std::get<1>(chainPositions.at(j));
-
-#ifdef DEBUG
-            // if(
-            //     a1p1 == Point3::ANY ||
-            //     a1p2 == Point3::ANY ||
-            //     a2p1 == Point3::ANY ||
-            //     a2p2 == Point3::ANY
-            // ){
-            //     printf("hello");
-            // }
-#endif
 
             //TODO
             //calculate the transition time for this pair
