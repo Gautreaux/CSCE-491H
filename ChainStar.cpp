@@ -235,17 +235,6 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
             }
         }
 
-        // (Deprecated) remove all chains that are below the threashold
-        // unsigned int minChainActual;
-        // if((*consideredChains.end()).getChainLength() <= MIN_CHAIN_THRESHOLD){
-        //     minChainActual = 0;
-        // }else{
-        //     minChainActual = MIN_CHAIN_THRESHOLD;
-        // }
-        // Chain testC(0, minChainActual, true);
-        // auto eIter = consideredChains.upper_bound(testC);
-        // consideredChains.erase(consideredChains.begin(), eIter);
-
         //TODO - move cached pairs and copy back in the ones that are still relevant
         //  This **should** provide performance improvement, but should check
 
@@ -253,6 +242,7 @@ LayerResults ChainStar::doRecomputeLayer(const GCodeParser& gcp, const double zL
         std::cout << "Starting chain collision checks w/ size: " << consideredChains.size() << std::endl; 
 
         //ensure that all current chains have the collision-ness computed
+        //  NOTE: chain printing concurrency is potentially not symmetric
         for(const Chain& chain1 : consideredChains){
             for(const Chain& chain2 : consideredChains){
                 if(chain1 == chain2){
