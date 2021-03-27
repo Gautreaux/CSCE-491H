@@ -4,6 +4,7 @@
 
 #include "GCodeLib/GCodeParser.h"
 #include "UtilLib/FileUtil.h"
+#include "RecomputeFrameworks.h"
 
 #include "ChainStar.h"
 

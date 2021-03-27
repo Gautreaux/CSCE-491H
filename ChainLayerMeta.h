@@ -39,7 +39,7 @@ protected:
 public:
 //constructors
     ChainLayerMeta(const GCodeParser& gcp, const double zLayer);
-
+    virtual ~ChainLayerMeta(void);
 //methods
 
     //return a dynamic bitset that represents this chain in the layer
@@ -50,59 +50,49 @@ public:
     //chainAsBitMask for both chains in the PreComputeChain
     DynamicBitset preComputeChainAsBitMask(const PreComputeChain& pcc) const;
 
-    //determine how far along this chain agentA can traverse
-    //  return how many steps that is
-    //  presently, mostly insignificant function
-    unsigned int resolveCainAgentA(const Chain& chain);
-
-    //determine how far along this chain agentB can traverse
-    //  return how many steps that is
-    //  presently, mostly insignificant function
-    unsigned int resolveChainAgentB(const Chain& chain);
-
     //determine how far the two chains can be printed before colliding
     // return how many steps can be completed concurrently
-    unsigned int resolveChainPair(const Chain& chainA, const Chain& chainB) const;
+    virtual unsigned int resolveChainPair(const Chain& chainA, const Chain& chainB) const;
     inline unsigned int resolveChainPair(
         const std::pair<const Chain&, const Chain&> chainPair) const 
     {
         return resolveChainPair(chainPair.first, chainPair.second);
     }
 
-    inline Point3 getChainStartPoint(const Chain& chain) const {
+    virtual inline Point3 getChainStartPoint(const Chain& chain) const {
         const GCodeSegment& seg = gcp.at(segmentTranslation.at(chain.getStartIndex()));
         return ((chain.isForward()) ? seg.getStartPoint() : seg.getEndPoint());
     }
 
-    inline Point3 getChainEndPoint(const Chain& chain) const {
+    virtual inline Point3 getChainEndPoint(const Chain& chain) const {
         const GCodeSegment& seg = gcp.at(segmentTranslation.at(chain.getEndIndex()));
         return ((chain.isForward()) ? seg.getEndPoint() : seg.getStartPoint());
     }
 
     //return true iff this agent can print this segment
-    bool canAgentAPrintSegment(const GCodeSegment& seg) const {
+    virtual bool canAgentAPrintSegment(const GCodeSegment& seg) const {
         return true;
     }
 
 
     //return true iff this agent can print this segment
-    bool canAgentBPrintSegment(const GCodeSegment& seg) const {
+    virtual bool canAgentBPrintSegment(const GCodeSegment& seg) const {
         return true;
     }
 
     //return true iff this agent can print the segment at index i
-    inline bool canAgentAPrintSegmentIndex(const unsigned int i) const {
+    virtual inline bool canAgentAPrintSegmentIndex(const unsigned int i) const {
         return canAgentAPrintSegment(gcp.at(segmentTranslation.at(i)));
     }
     
     //return true iff this agent can print the segment at index i
-    inline bool canAgentBPrintSegmentIndex(const unsigned int i) const {
+    virtual inline bool canAgentBPrintSegmentIndex(const unsigned int i) const {
         return canAgentBPrintSegment(gcp.at(segmentTranslation.at(i)));
     }
 
     //return true iff A1 can move/print ls1 concurrently with A2 printing ls2
     //  may be printing while moving too
-    inline bool canMoveSegmentPair(const LineSegment& ls1, 
+    virtual inline bool canMoveSegmentPair(const LineSegment& ls1, 
         const LineSegment& ls2, 
         const bool ls1IsPrint = false, 
         const bool ls2IsPrint = false) const 
@@ -111,14 +101,14 @@ public:
     }
 
     //return true if the A1 position and the A2 position can be held concurrently
-    inline bool isValidPositionPair(const Point3& a1Pos, const Point3& a2Pos) const
+    virtual inline bool isValidPositionPair(const Point3& a1Pos, const Point3& a2Pos) const
     {
         return getPointDistance(a1Pos, a2Pos) >= CHAIN_MIN_SEPERATION_MM;
     }
 
     //return true if A2 can hold the A2 pos while A1 travels the A1Seg
     //  not necessarily symmetric with the other
-    inline bool isValidSegmentPosition(const LineSegment& a1Seg, 
+    virtual inline bool isValidSegmentPosition(const LineSegment& a1Seg, 
         const Point3& a2Pos) const
     {
         return a1Seg.minSeperationDistance(a2Pos) >= CHAIN_MIN_SEPERATION_MM;
@@ -126,7 +116,7 @@ public:
 
     //return true if A1 can hold the A1 pos while A2 travels the a2Seg
     //  not necessarily symmetric with the other
-    inline bool isValidSegmentPosition(const Point3& a1Pos,
+    virtual inline bool isValidSegmentPosition(const Point3& a1Pos,
         const LineSegment& a2Seg) const
     {
         return a2Seg.minSeperationDistance(a1Pos) >= CHAIN_MIN_SEPERATION_MM;

@@ -143,3 +143,5 @@ ChainLayerMeta::ChainLayerMeta(const GCodeParser& gcp, const double layer) :
 
     std::sort(chains.begin(), chains.end());
 }
+
+ChainLayerMeta::~ChainLayerMeta(void){};

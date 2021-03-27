@@ -8,7 +8,7 @@ CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -Wall -o $@ $< OFiles/*.o
 
 EXECUTABLE=Main
 
-$(EXECUTABLE) : Main.cpp OFiles/FileUtil.o OFiles/GCodeParser.o OFiles/ChainStar.o
+$(EXECUTABLE) : Main.cpp OFiles/FileUtil.o OFiles/GCodeParser.o OFiles/ChainStar.o OFiles/RecomputeFrameworks.o
 	$(CC_COMPILE_LINK_EXE_AUTO) -lpthread
 
 ChainLinkerTesting : ChainLinkerTesting.cpp OFiles/LineSegment.o OFiles/ChainLayerMeta.o
@@ -32,6 +32,9 @@ release : clean
 
 debug : clean
 	make CPPFLAGS=-g
+
+OFiles/RecomputeFrameworks.o : RecomputeFrameworks.cpp RecomputeFrameworks.h OFiles/ChainLayerMeta.o OFiles/pch.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # geometry files 
 OFiles/GCodeParser.o : GCodeLib/GCodeParser.cpp GCodeLib/GCodeParser.h OFiles/GCodeSegment.o OFiles/Point3.o OFiles/pch.o
@@ -96,6 +99,10 @@ PQTest.exe : TestingCode/PQTest.cpp OFiles/DynamicBitset.o OFiles/RecomputeState
 
 PQTest2.exe : TestingCode/PQTest2.cpp OFiles/DynamicBitset.o OFiles/RecomputeState.o OFiles/PrunedAStar.o OFiles/Pch.o
 	$(CC_COMPILE_LINK_EXE_AUTO)
+
+# run command
+run81191 :
+	./Main gcodeSampleSet/81191.gcode
 
 
 # Uses builtin .cpp -> .o translation instead

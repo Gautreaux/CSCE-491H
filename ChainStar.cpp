@@ -50,20 +50,6 @@ void ChainStar::doRecompute(const GCodeParser& gcp){
         double(rawTimeSum)/newTimeSum);
 }
 
-//TODO - this should be in the ChainLayerMeta scope?
-unsigned int resolveCainAgentA(const Chain& chain){
-    //TODO - add a check if agentA can print the whole chain
-    //since right now the chains are interchangable, just return length
-    return chain.getChainLength();
-}
-
-//TODO - this should be in the ChainLayerMeta scope?
-unsigned int resolveChainAgentB(const Chain& chain){
-    //TODO - add a check if agentB can print the whole chain
-    //since right now the chains are interchangable, just return length
-    return chain.getChainLength();
-}
-
 #define INVALID_TRANSITION -1u
 
 unsigned int ChainStar::getTransitionTime(const Point3& a1p1,
