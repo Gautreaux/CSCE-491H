@@ -125,24 +125,25 @@ int main(int argc, char ** argv){
         // std::cout << "Total States Explored: " << p.getTotalStatesExpanded() << std::endl; 
         // std::cout << "Normal Exit occurred" << std::endl;
 
-        double z = *(gcp.layers_begin());
-        std::cout << "Testing on ChainLayerMeta on z = " << z << std::endl;
-        const ChainLayerMeta clm(gcp, z);
+        // double z = *(gcp.layers_begin());
+        // std::cout << "Testing on ChainLayerMeta on z = " << z << std::endl;
+        // const ChainLayerMeta clm(gcp, z);
 
-        printf("Resolved %u print segments in layer.\n", clm.getNumPrintSegmentsInLayer());
-        printf("Resolved %lu chains in layer:\n", clm.getChainListRef().size());
+        // printf("Resolved %u print segments in layer.\n", clm.getNumPrintSegmentsInLayer());
+        // printf("Resolved %lu chains in layer:\n", clm.getChainListRef().size());
 
-        if(clm.getChainListRef().size() < 30){
-            int chainNum = 0;
-            for(auto chain : clm.getChainListRef()){
-                std::cout << "  " << chainNum++ << " " << chain << endl;
-            }
-        }
+        // if(clm.getChainListRef().size() < 30){
+        //     int chainNum = 0;
+        //     for(auto chain : clm.getChainListRef()){
+        //         std::cout << "  " << chainNum++ << " " << chain << endl;
+        //     }
+        // }
 
-        // clm.doAllPairsCheck();
-        // clm.doAllChainsCheck();
-        ChainStar cs;
-        cs.doRecompute(gcp, ChainStar::RecomputeMode::THEORETICAL);
+        // // clm.doAllPairsCheck();
+        // // clm.doAllChainsCheck();
+        
+        ChainStar<TheoreticalModel> cs;
+        cs.doRecompute(gcp);
     }
     else
     {
