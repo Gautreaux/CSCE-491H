@@ -69,7 +69,7 @@ OFiles/ChainStarHelper.o : ChainStarHelper.cpp ChainStarHelper.h OFiles/pch.o
 OFiles/ChainLayerMeta.o : ChainLayerMeta.cpp ChainLayerMeta.h OFiles/pch.o OFiles/GCodeParser.o OFiles/DynamicBitset.o OFiles/ChainStarHelper.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-OFiles/RecomputeFrameworks.o : RecomputeFrameworks.cpp RecomputeFrameworks.h OFiles/ChainLayerMeta.o OFiles/GCodeParser.o OFiles/pch.o
+OFiles/RecomputeFrameworks.o : RecomputeFrameworks.cpp RecomputeFrameworks.h OFiles/ChainLayerMeta.o OFiles/ChainStarHelper.o OFiles/GCodeParser.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # util files

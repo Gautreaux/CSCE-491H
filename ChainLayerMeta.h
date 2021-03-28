@@ -74,53 +74,40 @@ public:
         return true;
     }
 
-
     //return true iff this agent can print this segment
     virtual bool canAgentBPrintSegment(const GCodeSegment& seg) const {
         return true;
     }
 
     //return true iff this agent can print the segment at index i
-    virtual inline bool canAgentAPrintSegmentIndex(const unsigned int i) const {
+    inline bool canAgentAPrintSegmentIndex(const unsigned int i) const {
         return canAgentAPrintSegment(gcp.at(segmentTranslation.at(i)));
     }
     
     //return true iff this agent can print the segment at index i
-    virtual inline bool canAgentBPrintSegmentIndex(const unsigned int i) const {
+    inline bool canAgentBPrintSegmentIndex(const unsigned int i) const {
         return canAgentBPrintSegment(gcp.at(segmentTranslation.at(i)));
     }
 
     //return true iff A1 can move/print ls1 concurrently with A2 printing ls2
     //  may be printing while moving too
-    virtual inline bool canMoveSegmentPair(const LineSegment& ls1, 
-        const LineSegment& ls2, 
-        const bool ls1IsPrint = false, 
-        const bool ls2IsPrint = false) const 
-    {
-        return ls1.minSeperationDistance(ls2) >= CHAIN_MIN_SEPERATION_MM;
-    }
+    virtual inline bool canMoveSegmentPair(
+        const LineSegment& a1Seg, const LineSegment& a2Seg, 
+        const bool isA1Print = false, const bool isA2Print = false
+    ) const = 0;
 
     //return true if the A1 position and the A2 position can be held concurrently
-    virtual inline bool isValidPositionPair(const Point3& a1Pos, const Point3& a2Pos) const
-    {
-        return getPointDistance(a1Pos, a2Pos) >= CHAIN_MIN_SEPERATION_MM;
-    }
+    virtual inline bool isValidPositionPair(const Point3& a1Pos, const Point3& a2Pos) const = 0;
 
     //return true if A2 can hold the A2 pos while A1 travels the A1Seg
     //  not necessarily symmetric with the other
     virtual inline bool isValidSegmentPosition(const LineSegment& a1Seg, 
-        const Point3& a2Pos) const
-    {
-        return a1Seg.minSeperationDistance(a2Pos) >= CHAIN_MIN_SEPERATION_MM;
-    }
+        const Point3& a2Pos) const = 0;
 
     //return true if A1 can hold the A1 pos while A2 travels the a2Seg
     //  not necessarily symmetric with the other
     virtual inline bool isValidSegmentPosition(const Point3& a1Pos,
-        const LineSegment& a2Seg) const
-    {
-        return a2Seg.minSeperationDistance(a1Pos) >= CHAIN_MIN_SEPERATION_MM;
-    }
+        const LineSegment& a2Seg) const = 0;
 
     //return the total time taken to transition between the position pairs
     //determine the total transition time for the agents
