@@ -122,6 +122,15 @@ public:
         return a2Seg.minSeperationDistance(a1Pos) >= CHAIN_MIN_SEPERATION_MM;
     }
 
+    //return the total time taken to transition between the position pairs
+    //determine the total transition time for the agents
+    //  assumes that a1 transitions between a1p1 and a1p2 but 
+    //  does not assume that a1p1 is the start of the transition
+    //  same is true for a2
+    virtual unsigned int getTransitionTime(
+        const Point3 &a1p1, const Point3 &a1p2,
+        const Point3 &a2p1, const Point3 &a2p2) const;
+
 //accessors
 
     inline const ChainList& getChainListRef(void) const {return chains;}

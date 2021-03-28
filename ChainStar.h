@@ -36,6 +36,13 @@ typedef std::tuple<Point3, Point3, unsigned int> PositionPair;
 typedef std::tuple<unsigned int, unsigned int, unsigned int> ResolvedTransition;
 
 //tuple ordering
+//  transition cost
+//  state a index
+//  state b index
+typedef std::tuple<unsigned int, unsigned int, unsigned int>
+    StateTransition;
+
+//tuple ordering
 //  newTime - new time cost for layer
 //  baseTime - original print time cost for layer
 //  rawTime - original total time for layer
@@ -51,21 +58,30 @@ public:
     enum class RecomputeMode {THEORETICAL, CODEX, CURRENT};
 
 protected:
+    struct State{
+    public:
+        Point3 a1Pos;
+        Point3 a2Pos;
+        unsigned int partnerIndex;
+        unsigned int chainGroup;
+        bool hasBeenUsed;
+    };
+
     //run recompute on the specific layer
     LayerResults doRecomputeLayer(const GCodeParser& gcp, const double zLayer, const RecomputeMode mode);
-
-    //determine the total transition time for the agents
-    //  assumes that a1 transitions between a1p1 and a1p2 but 
-    //  does not assume that a1p1 is the start of the transition
-    //  same is true for a2
-    unsigned int getTransitionTime(const Point3& a1p1, const Point3& a1p2,
-        const Point3& a2p1, const Point3& a2p2, const ChainLayerMeta& clm) const;
 
     //do the phase 1 layer recompute:
     //  Matching segment chains together into pairs
     //      using CLM functions to determine if the chains can be concurrent
     //      specifically, the resolveChainPairs function
     void doPhase1LayerRecompute(
+        std::vector<PreComputeChain>& resolvedPrecomputeChainPairs,
+        const ChainLayerMeta& clm
+    );
+
+    //do the phase 2 layer recompute:
+    //  Linking endpoints of chain pairs
+    unsigned int doPhase2LayerRecompute(
         std::vector<PreComputeChain>& resolvedPrecomputeChainPairs,
         const ChainLayerMeta& clm
     );

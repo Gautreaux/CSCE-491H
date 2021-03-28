@@ -98,6 +98,13 @@ void ChainLayerMeta::doAllChainsCheck(void) const {
     }
 }
 
+unsigned int ChainLayerMeta::getTransitionTime(
+    const Point3& a1p1, const Point3& a1p2,
+    const Point3& a2p1, const Point3& a2p2
+) const {
+    return 1;
+}
+
 
 ChainLayerMeta::ChainLayerMeta(const GCodeParser& gcp, const double layer) :
     chains(), segmentTranslation(), totalPrintSegments(0), totalSegments(0),

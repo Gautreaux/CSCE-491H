@@ -10,10 +10,10 @@
 void ChainStar::doRecompute(const GCodeParser& gcp, const RecomputeMode mode){
     assert(gcp.isValid());
 
-    unsigned int newTimeSum = 0;
-    unsigned int baseTimeSum = 0;
+    unsigned int totalTimeSum = 0;
     unsigned int rawTimeSum = 0;
-    unsigned int newBaseSum = 0;
+    unsigned int rawPrintTimeSum = 0;
+    unsigned int printTimeSum = 0;
     unsigned int layersRun = 0;
 
     clock_t startTime = clock();
@@ -22,10 +22,10 @@ void ChainStar::doRecompute(const GCodeParser& gcp, const RecomputeMode mode){
         //TODO - some return type stuff here?
         LayerResults r = doRecomputeLayer(gcp, layer, mode);
 
-        newTimeSum += std::get<0>(r);
-        baseTimeSum += std::get<1>(r);
-        rawTimeSum += std::get<2>(r);
-        newBaseSum += std::get<3>(r);
+        totalTimeSum += std::get<0>(r);
+        rawTimeSum += std::get<1>(r);
+        rawPrintTimeSum += std::get<2>(r);
+        printTimeSum += std::get<3>(r);
 
         layersRun++;
 #ifdef SINGLE_LAYER_ONLY
@@ -37,90 +37,19 @@ void ChainStar::doRecompute(const GCodeParser& gcp, const RecomputeMode mode){
     printf("Recompute duration (s): %.3f\n", double(endTime-startTime)/CLOCKS_PER_SEC);
 
     printf("Ran %u layers\n", layersRun);
-    printf("Total new time: %u\n", newTimeSum);
-    printf("Total base time: %u\n", baseTimeSum);
-    printf("Total raw time: %u\n", rawTimeSum);
-    printf("Total new base: %u\n", newBaseSum);
+    printf("Total new time: %u\n", totalTimeSum);
+    printf("Total base time: %u\n", rawTimeSum);
+    printf("Total raw print time: %u\n", rawPrintTimeSum);
+    printf("Total new print time: %u\n", printTimeSum);
 
-    printf("Efficiency base/new base: %.3f (Optimal = 2)\n",
-        double(baseTimeSum)/newBaseSum);
-    printf("Efficiency base/ new total: %.3f (Optimal = 2)\n",
-        double(baseTimeSum)/newTimeSum);
-    printf("Efficiency raw/ new total: %.3f (Optimal > 2)\n",
-        double(rawTimeSum)/newTimeSum);
+    printf("Total Efficiency: base/new base: %.3f (Optimal > 2)\n",
+        double(rawTimeSum)/totalTimeSum);
+    printf("Print Efficiency: print/ new print: %.3f (Optimal = 2)\n",
+        double(rawPrintTimeSum)/printTimeSum);
 }
 
 #define INVALID_TRANSITION -1u
 
-//TODO - move into ChainLayerMeta
-unsigned int ChainStar::getTransitionTime(const Point3& a1p1,
-    const Point3& a1p2, const Point3& a2p1, const Point3& a2p2,
-    const ChainLayerMeta& clm) const 
-{
-    return 1;
-    //TODO - get transition time need a potentially massive overhaul
-    if( (a1p1 == Point3::ANY || a1p2 == Point3::ANY) &&
-        (a2p1 == Point3::ANY || a2p2 == Point3::ANY)
-    ){
-        //a special case where both a1 and a2 both have free choice
-        // in theory, both or operations are x-or true
-        // however, since we already treat an any position as free
-        // this transition must be a completely free one
-        
-        //however this brings about a problem where now we 
-        //  are potentially massive underestimating the time
-        //  and by collapsing the minimum transitions,
-        //      this transition will always be chosen
-        //  so we just call this an invalid transition and return
-        //      the maximum 
-        // TODO - should probably be an exception
-        return INVALID_TRANSITION;
-    }
-    if((a1p1 == Point3::ANY || a1p2 == Point3::ANY)){
-        //we know that both of the a2 positions are fixed
-        //and again we treat any as 0-cost
-        //so we treat this as a free movement w.r.t a1
-        //and only worry about the a2 time
-        //again, possibly underestimating but not a big deal
-        double d = getPointDistance(a2p1, a2p2);
-        d /= CHAIN_MIN_SEPERATION_MM;
-        return (std::ceil(d));
-    }
-    if((a2p1 == Point3::ANY || a2p2 == Point3::ANY)){
-        //same comments as above apply here
-        double d = getPointDistance(a1p1, a1p2);
-        d /= CHAIN_MIN_SEPERATION_MM;
-        return (std::ceil(d));
-    }
-
-    //now begin the process of actually computing the transition time
-
-    //create the two underlying segments
-    LineSegment a1Seg(a1p1, a1p2);
-    LineSegment a2Seg(a2p1, a2p2);
-
-    if(clm.canMoveSegmentPair(a1Seg, a2Seg)){
-        double d = std::max(a1Seg.length(), a2Seg.length());
-        d /= CHAIN_MIN_SEPERATION_MM;
-        return (std::ceil(d));
-    }
-
-    //try no-oping one while the other moves
-    //  then no-oping the other while the first moves
-    //may overestimate the time required
-    //TODO
-    
-
-    //the final operation:
-    //  we know that the positions pairs are valid
-    //  so there exists some transition that makes this work, somehow
-    //  we can approximate this by
-    //      move one agent, 1 segment out of the way
-    //      move the second agent to its new position
-    //      move the first agent back to its starting position (1 cost)
-    //      move the first agent to its new position
-    return (std::ceil(a1Seg.length()) + std::ceil(a2Seg.length()) + 2);
-}
 
 void ChainStar::doPhase1LayerRecompute(
     std::vector<PreComputeChain> &resolvedPrecomputeChainPairs,
@@ -464,6 +393,145 @@ void ChainStar::doPhase1LayerRecompute(
     } // while(True)
 }
 
+unsigned int ChainStar::doPhase2LayerRecompute(
+    std::vector<PreComputeChain>& resolvedPrecomputeChainPairs,
+    const ChainLayerMeta& clm
+)
+{
+    //now link partial chains together in an efficient way
+    //  start with the set of all chains
+    //  while the size of the set of all chains > 1:
+    //      determine the time from each chain endpoint
+    //          to all other chain endpoints
+    //      pick the closest two chain's endpoints
+    //      remove corresponding chains from set
+    //      combine the two chains into a super chain
+    //      insert new chain into set
+    // in practice its a little more complicated
+
+    std::vector<ChainStar::State> stateList;
+    unsigned int numChainPairs = 0;
+
+    for(auto& chainPair : resolvedPrecomputeChainPairs){
+
+        State s1,s2;
+        s1.a1Pos = ((chainPair.c1.isNoopChain()) ? Point3::ANY : clm.getChainStartPoint(chainPair.c1));
+        s2.a1Pos = ((chainPair.c1.isNoopChain()) ? Point3::ANY : clm.getChainEndPoint(chainPair.c1));
+        s1.a2Pos = ((chainPair.c2.isNoopChain()) ? Point3::ANY : clm.getChainStartPoint(chainPair.c2));
+        s2.a2Pos = ((chainPair.c2.isNoopChain()) ? Point3::ANY : clm.getChainEndPoint(chainPair.c2));
+
+        s1.hasBeenUsed = false;
+        s2.hasBeenUsed = false;
+
+        s1.partnerIndex = stateList.size() + 1;
+        s2.partnerIndex = s1.partnerIndex - 1;
+
+        s1.chainGroup = numChainPairs;
+        s2.chainGroup = numChainPairs;
+
+        stateList.push_back(s1);
+        stateList.push_back(s2);
+
+        numChainPairs++;
+    }
+
+#ifdef DEBUG
+    std::cout << "Total chain pairs: " << numChainPairs << std::endl;
+    std::cout << "Number states: " << stateList.size() << std::endl;
+    assert(stateList.size() == (numChainPairs * 2));
+#endif //DEBUG
+
+    std::priority_queue<StateTransition> pq;
+
+    for(unsigned int i = 0; i < stateList.size(); i++){
+        for(unsigned int j = i+1; j < stateList.size(); j++){
+            if(stateList.at(i).partnerIndex == j){
+                continue;
+            }
+
+            auto t = clm.getTransitionTime(
+                stateList.at(i).a1Pos, stateList.at(j).a1Pos,
+                stateList.at(i).a2Pos, stateList.at(j).a2Pos
+            );
+            pq.emplace(-t, i, j);
+        }
+    }
+
+#ifdef DEBUG
+    std::cout << "Precompute done, now linking. Precompute QTY: " << pq.size() << std::endl;
+#endif //DEBUG
+
+    unsigned int statesUsed = 0;
+    unsigned int totalTimeTransition = 0;
+    while(statesUsed < (stateList.size() - 2))
+    {
+        if(pq.empty()){
+            throw std::runtime_error("Presumably invalid state reached?");
+        }
+
+        auto& t = pq.top();
+        const auto transitionTime = -std::get<0>(t);
+        State& state1 = stateList.at(std::get<1>(t));
+        State& state2 = stateList.at(std::get<2>(t));
+        pq.pop();
+
+        if(state1.hasBeenUsed){
+            continue;
+        }
+        if(state2.hasBeenUsed){
+            continue;
+        }
+        if(state1.chainGroup == state2.chainGroup){
+            continue;
+        }
+
+        statesUsed += 2;
+        totalTimeTransition += transitionTime;
+
+        state1.hasBeenUsed = true;
+        state2.hasBeenUsed = true;
+
+        State& state1OldPartner = stateList.at(state1.partnerIndex);
+        State& state2OldPartner = stateList.at(state2.partnerIndex);
+
+#ifdef DEBUG
+        assert(state1OldPartner.hasBeenUsed == false);
+        assert(state2OldPartner.hasBeenUsed == false);
+
+        assert(state1OldPartner.chainGroup == state1.chainGroup);
+        assert(state2OldPartner.chainGroup == state2.chainGroup);
+#endif //DEBUG
+
+        state2.chainGroup = state1.chainGroup;
+        state2OldPartner.chainGroup = state1.chainGroup;
+
+        state1OldPartner.partnerIndex = state2.partnerIndex;
+        state2OldPartner.partnerIndex = state1.partnerIndex;
+    }
+
+#ifdef DEBUG
+    std::cout << "Linking finished, doing debugging checks.";
+    std::vector<unsigned int> unusedStateIndexes;
+    for(unsigned int i = 0; i < stateList.size(); i++){
+        if(stateList.at(i).hasBeenUsed == false){
+            unusedStateIndexes.push_back(i);
+        }
+    }
+
+    assert(unusedStateIndexes.size() == 2);
+
+    std::cout << "Unused state indexes: " << unusedStateIndexes[0] << " " << unusedStateIndexes[1] << std::endl;
+
+    State& s1 = stateList[unusedStateIndexes[0]];
+    State& s2 = stateList[unusedStateIndexes[1]];
+
+    assert(s1.partnerIndex == unusedStateIndexes[1]);
+    assert(s2.partnerIndex == unusedStateIndexes[0]);
+#endif //DEBUG
+
+    return totalTimeTransition;
+}
+
 LayerResults ChainStar::doRecomputeLayer(
     const GCodeParser &gcp, const double zLayer,
     const RecomputeMode mode)
@@ -522,177 +590,37 @@ LayerResults ChainStar::doRecomputeLayer(
     dumpChainPairsToFile(gcp.getFilePath(), resolvedPrecomputeChainPairs, clm, zLayer);
 #endif
 
-    //now link partial chains together in an efficient way
-    //  start with the set of all chains
-    //  while the size of the set of all chains > 1:
-    //      determine the time from each chain endpoint
-    //          to all other chain endpoints
-    //      pick the closest two chain's endpoints
-    //      remove corresponding chains from set
-    //      combine the two chains into a super chain
-    //      insert new chain into set
-    // in practice its a little more complicated
-
-    //stores all the positions of chains that we need to deal with
-    std::vector<PositionPair> chainPositions;
-
-    //the point representing any position (and thus a no-op move)
-    //TODO - should be semi-formalized probably
-    //  and not just 0,0,0 but whatever
-    Point3 anyPos = Point3::ANY;
-
-    //TODO - PROBLEM IN HERE
-    //  HOW TO HANDLE THE NOOP CHAINS?
-    //  THE POINTS THAT ARE ALL ZERO
-    //now we need to add the endpoints to that set
-    for(unsigned int i = 0; i < resolvedPrecomputeChainPairs.size(); i++){
-        const PreComputeChain& pcc = resolvedPrecomputeChainPairs[i];
-        auto t = PositionPair(
-            ((pcc.c1.getChainLength() != 0) ? clm.getChainStartPoint(pcc.c1) : anyPos),
-            ((pcc.c2.getChainLength() != 0) ? clm.getChainStartPoint(pcc.c2) : anyPos),
-            i
-        );
-
-#ifdef DEBUG
-        assert(std::get<0>(t).getZ() == zLayer || std::get<0>(t).getZ() == Point3::ANY.getZ());
-        assert(std::get<1>(t).getZ() == zLayer || std::get<1>(t).getZ() == Point3::ANY.getZ());
-#endif
-
-        chainPositions.push_back(t);
-
-        t = PositionPair(
-            ((pcc.c1.getChainLength() != 0) ? clm.getChainEndPoint(pcc.c1) : anyPos),
-            ((pcc.c2.getChainLength() != 0) ? clm.getChainEndPoint(pcc.c2) : anyPos),
-            i
-        );
-
-#ifdef DEBUG
-        assert(std::get<0>(t).getZ() == zLayer || std::get<0>(t).getZ() == Point3::ANY.getZ());
-        assert(std::get<1>(t).getZ() == zLayer || std::get<1>(t).getZ() == Point3::ANY.getZ());
-#endif
-
-        chainPositions.push_back(t);
+    //time spent printing segments in the recomputed file
+    unsigned int printTime = 0;
+    for(auto& c : resolvedPrecomputeChainPairs){
+        printTime += c.amountPrinted;
     }
 
-    //stores the resolved transitions
-    std::priority_queue<ResolvedTransition> transitionsPQ;
+    //time spend transitioning in the recomputed file
+    unsigned int totalTransitionsTime = doPhase2LayerRecompute(
+        resolvedPrecomputeChainPairs, clm);
 
-    //TODO - should re-work this to the lazy evaluation method used
-    //  in the phase 1
+    //total time in the recomputed file
+    unsigned int totalTime = printTime + totalTransitionsTime;
 
-    //for some position pair starting at i and ending at j
-    //  calculate the cost to transition from i to j
-    for(unsigned int i = 0; i < chainPositions.size(); i++){
-        for(unsigned int j = 0; j < chainPositions.size(); j++){
-            if(std::get<2>(chainPositions.at(i)) == 
-                std::get<2>(chainPositions.at(j)))
-            {
-                //these are the two endpoints of the same chain
-                //  (or the same point if i == j)
-                //so this is not a valid transition
-                continue;
-            }
-
-            auto a1p1 = std::get<0>(chainPositions.at(i));
-            auto a1p2 = std::get<1>(chainPositions.at(i));
-            auto a2p1 = std::get<0>(chainPositions.at(j));
-            auto a2p2 = std::get<1>(chainPositions.at(j));
-
-            //TODO
-            //calculate the transition time for this pair
-            unsigned int transitionTime = getTransitionTime(
-                a1p1, a1p2, a2p1, a2p2, clm
-            );
-
-            //skip these potentially invalid transitions
-            //  this may cause a problem if the number of 
-            //  single agent moves is larger than number of double agent moves
-            if(transitionTime == INVALID_TRANSITION){
-                continue;
-            }
-
-            auto t = ResolvedTransition(transitionTime, i, j);
-            transitionsPQ.push(t);
-        }
-    }
-
-    //bitset for tracking which positions are (not) used already
-    DynamicBitset positionsBitset(chainPositions.size());
-
-    //tracks the total transition time penalty
-    unsigned int totalTransitionsTime = 0;
-
-    //compare against two, because two points
-    //  the start and end of the layer
-    //  can be unset and there is no problem
-    //TODO - long term
-    //  can inject a layer start point to make sure that the 
-    //      recomputed layer starts at some location
-    //      relatively reasonable to the previous layer's end point
-    while(positionsBitset.getUnsetCount() != 2){
-        if(positionsBitset.getUnsetCount() < 2){
-            //pretty sure this is an error and unreachable
-            std::cout << "Warning: reached possibly invalid state:"
-                " <2 unset in transition" << std::endl;
-            break;
-        }
-
-        while(true){
-            if(transitionsPQ.size() == 0){
-                throw std::runtime_error("Transitions pq empty prematurely\n");
-            }
-
-            auto t = transitionsPQ.top();
-            transitionsPQ.pop();
-
-            //check if this is a new transition and is needed
-            unsigned int transition_start = std::get<1>(t);
-            unsigned int transition_end = std::get<2>(t);
-
-            if(positionsBitset.at(transition_start)){
-                //the transition's start point was already used
-                continue;
-            }
-
-            if(positionsBitset.at(transition_end)){
-                //the transition's end point was already used
-                continue;
-            }
-
-            positionsBitset.set(transition_start);
-            positionsBitset.set(transition_end);
-            totalTransitionsTime += std::get<0>(t);
-            
-            break;
-        }
-    }
-
-    //now compute the total path-print time
-    unsigned int pathPrintTime = 0;
-    for(auto pcc : resolvedPrecomputeChainPairs){
-        pathPrintTime += pcc.amountPrinted;
-    }
-
-    unsigned int totalTime = pathPrintTime + totalTransitionsTime;
-    unsigned int baseTime = clm.getNumPrintSegmentsInLayer();
+    //total time in the original file
     unsigned int rawTime = clm.getNumSegmentsInLayer();
 
+    //time spend printing in the original file
+    unsigned int rawPrintTime = clm.getNumPrintSegmentsInLayer();
+
     //debug info
-    std::cout << "Total Print Time: " << pathPrintTime << std::endl;
+    std::cout << "Total Print Time: " << printTime << std::endl;
     std::cout << "Total Transitions Time: " << totalTransitionsTime << std::endl;
     std::cout << "Total Time: " << totalTime << std::endl;
 
-    std::cout << "Base Print Time: " << baseTime  << std::endl;
-    printf("Efficiency: %.3f (Optimal = 2)\n", double(baseTime)/totalTime);
-    printf("Time %%: %.3f%% (Optimal = 50%%)\n", double(totalTime*100)/(baseTime));
-
-    std::cout << "Raw Print Time: " << rawTime << std::endl;
+    std::cout << "Base Print Time: " << rawTime  << std::endl;
     printf("Efficiency: %.3f (Optimal = 2)\n", double(rawTime)/totalTime);
     printf("Time %%: %.3f%% (Optimal = 50%%)\n", double(totalTime*100)/(rawTime));
 
-    // printf("Speedup %%: %.3f%% (Optimal = 100%%)\n", 
-    //     double((baseTime-totalTime)*100)/baseTime
-    // );
+    std::cout << "Raw Print Time: " << rawPrintTime << std::endl;
+    printf("Efficiency: %.3f (Optimal = 2)\n", double(rawPrintTime)/totalTime);
+    printf("Time %%: %.3f%% (Optimal = 50%%)\n", double(totalTime*100)/(rawPrintTime));
 
     //TODO - final phases thingies
     //debug check that the resulting path is
@@ -702,5 +630,5 @@ LayerResults ChainStar::doRecomputeLayer(
     //finally export to a reasonable representation
 
     //and return the values
-    return LayerResults(totalTime, baseTime, rawTime, pathPrintTime);
+    return LayerResults(totalTime, rawTime, rawPrintTime, printTime);
 }
