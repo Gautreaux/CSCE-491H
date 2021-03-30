@@ -14,3 +14,8 @@ CurrentModel::CurrentModel(const GCodeParser& gcp, const double zLayer) :
 ChainLayerMeta(gcp, zLayer)
 {
 }
+
+RelaxedCurrentModel::RelaxedCurrentModel(const GCodeParser& gcp, const double zLayer) :
+CurrentModel(gcp, zLayer)
+{
+}

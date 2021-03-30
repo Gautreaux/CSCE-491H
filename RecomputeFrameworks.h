@@ -178,3 +178,20 @@ public:
         );
     }
 };
+
+class RelaxedCurrentModel : public CurrentModel
+{
+public:
+    RelaxedCurrentModel(const GCodeParser& gcp, const double zLayer);
+
+    //relaxed constraints on the is valid position pair
+    virtual inline bool isValidPositionPair(
+        const Point3& a1Pos, const Point3& a2Pos
+    ) const override {
+        return (
+            DOUBLE_GEQ(getPointDistance(a1Pos, a2Pos), CHAIN_MIN_SEPERATION_MM) &&
+            DOUBLE_GEQ(a1Pos.getY(), a2Pos.getY()) &&
+            DOUBLE_LEQ(abs(a1Pos.getX() - a2Pos.getX()), 5)
+        );
+    }
+};

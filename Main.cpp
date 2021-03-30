@@ -82,7 +82,7 @@ void printHelp(void){
     printf("-h : print help information\n");
     printf("-d : process the directory specified by <path>\n");
     printf("<path> : file/directory to process\n");
-    printf("<mode> : integer in [1-3] for mode to run\n");
+    printf("<mode> : integer in [0-3] for mode to run\n");
 }
 
 void printError(void){
@@ -166,11 +166,14 @@ int main(int argc, char ** argv){
         if(p.mode == 0){
             ChainStar<TheoreticalModel> csTheoretical;
             csTheoretical.doRecompute(gcp);
-        } else if(p.mode == 1){
+        }else if(p.mode == 1){
             ChainStar<CODEXModel> csCODEX;
             csCODEX.doRecompute(gcp);
-        } else if(p.mode == 2){
+        }else if(p.mode == 2){
             ChainStar<CurrentModel> csCurrent;
+            csCurrent.doRecompute(gcp);
+        }else if(p.mode == 3){
+            ChainStar<RelaxedCurrentModel> csCurrent;
             csCurrent.doRecompute(gcp);
         }else{
             printf("FATAL: Illegal mode: %d\n", p.mode);
