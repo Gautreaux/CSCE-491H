@@ -1,10 +1,20 @@
-CXX:=g++-8 # which compiler to use
+#g++ definitions
+# CXX:=g++-8 # which compiler to use
+# CPPFLAGS=# empty default value for GCC flags, can be overriden on command line
+# CPPSTD=-std=c++17# which c++ version to use
+
+# CPP_COMP_COM=$(CXX) $(CPPFLAGS) $(CPPSTD)
+# CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c -Wall -o $@ $<
+# CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -Wall -o $@ $< OFiles/*.o
+
+#nvcc defintions
+CXX:=nvcc # which compiler to use
 CPPFLAGS=# empty default value for GCC flags, can be overriden on command line
 CPPSTD=-std=c++17# which c++ version to use
 
 CPP_COMP_COM=$(CXX) $(CPPFLAGS) $(CPPSTD)
-CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c -Wall -o $@ $<
-CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -Wall -o $@ $< OFiles/*.o
+CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c --Werror all-warnings -o $@ $<
+CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -Werror all-warnings -o $@ $< OFiles/*.o
 
 EXECUTABLE=Main
 
@@ -28,7 +38,9 @@ clean :
 	rm -f ChainLinkerTesting
 
 release : clean
-	make CPPFLAGS=-Ofast
+	# make CPPFLAGS=-Ofast
+	# make CPPFLAGS="-O 300 --dlink-time-opt -Xptxas --allow-expensive-optimizations"
+	make CPPFLAGS="-O 300 -Xptxas --allow-expensive-optimizations"
 
 debug : clean
 	make CPPFLAGS=-g
