@@ -102,7 +102,29 @@ unsigned int ChainLayerMeta::getTransitionTime(
     const Point3& a1p1, const Point3& a1p2,
     const Point3& a2p1, const Point3& a2p2
 ) const {
-    return 1;
+    const LineSegment a1Seg(a1p1, a2p2);
+    const LineSegment a2Seg(a2p1, a2p2);
+    const double d1 = ceil(a1Seg.length() / CHAIN_MIN_SEPERATION_MM);
+    const double d2 = ceil(a2Seg.length() / CHAIN_MIN_SEPERATION_MM);
+    if (canMoveSegmentPair(a1Seg, a2Seg, false, false))
+    {
+        return (unsigned int)std::max(d1, d2);
+    }
+
+    if(isValidSegmentPosition(a1Seg, a2p1) && isValidSegmentPosition(a1p2, a2Seg)){
+        //a1 moves then a2 moves
+        //no added offsets
+        return (unsigned int)(d1 + d2);
+    }else if(isValidSegmentPosition(a1Seg, a2p2) && isValidSegmentPosition(a1p1, a2Seg)){
+        //a2 moves then a1 moves
+        //no added offsets
+        return (unsigned int)(d1 + d2);
+    }
+
+    //there is a potentially +2 bound where only one agent needs to offset
+    //but for the sake of ease we just overestimate
+    //  and let each agent move away and back
+    return (unsigned int)(d1 + d2) + 4;
 }
 
 

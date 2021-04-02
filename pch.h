@@ -21,6 +21,8 @@
 #define MB_TO_B (1024*1024)
 #define B_TO_MB (1.0/(MB_TO_B))
 
+#define CEIL_DIVISION(x, y) ((x % y) ? ((x / y) + 1) : (x / y))
+
 // these file flags control several print statements and checks in all the files
 //the higher the number, the more printing that occurs
 

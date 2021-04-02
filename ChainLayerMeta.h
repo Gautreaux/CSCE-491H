@@ -91,22 +91,22 @@ public:
 
     //return true iff A1 can move/print ls1 concurrently with A2 printing ls2
     //  may be printing while moving too
-    virtual inline bool canMoveSegmentPair(
+    virtual bool canMoveSegmentPair(
         const LineSegment& a1Seg, const LineSegment& a2Seg, 
         const bool isA1Print = false, const bool isA2Print = false
     ) const = 0;
 
     //return true if the A1 position and the A2 position can be held concurrently
-    virtual inline bool isValidPositionPair(const Point3& a1Pos, const Point3& a2Pos) const = 0;
+    virtual bool isValidPositionPair(const Point3& a1Pos, const Point3& a2Pos) const = 0;
 
     //return true if A2 can hold the A2 pos while A1 travels the A1Seg
     //  not necessarily symmetric with the other
-    virtual inline bool isValidSegmentPosition(const LineSegment& a1Seg, 
+    virtual bool isValidSegmentPosition(const LineSegment& a1Seg, 
         const Point3& a2Pos) const = 0;
 
     //return true if A1 can hold the A1 pos while A2 travels the a2Seg
     //  not necessarily symmetric with the other
-    virtual inline bool isValidSegmentPosition(const Point3& a1Pos,
+    virtual bool isValidSegmentPosition(const Point3& a1Pos,
         const LineSegment& a2Seg) const = 0;
 
     //return the total time taken to transition between the position pairs
