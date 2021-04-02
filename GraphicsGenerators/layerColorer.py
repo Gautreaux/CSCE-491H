@@ -37,6 +37,8 @@ def colorLayer(parseResult : ParseResult, name = ''):
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
         plt.title(f"{name}    z = {zLayer}")
+        plt.xlabel("X (mm)")
+        plt.ylabel("Y (mm)")
         plt.show()
 
 

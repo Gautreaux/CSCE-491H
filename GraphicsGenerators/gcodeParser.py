@@ -309,10 +309,10 @@ class ParseResult():
 
         # removing skirt        
         # iterate to the first non-print
-        while (ctr < segLen):
-            if not self.segList[ctr].isPrint():
-                break
-            ctr += 1
+        # while (ctr < segLen):
+        #     if not self.segList[ctr].isPrint():
+        #         break
+        #     ctr += 1
 
         if(ctr == segLen):
             raise ValueError("Something went wrong while parsing out the skirt")
