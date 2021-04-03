@@ -5,8 +5,8 @@
 
 #include "../pch.h"
 
-#include "GCodeSegment.h"
-#include "../GeometryLib/Point3.h"
+#include "GCodeSegment.cuh"
+#include "../GeometryLib/Point3.cuh"
 
 typedef std::vector<GCodeSegment>::const_iterator SegmentIterator;
 typedef std::vector<double>::const_iterator LayerIterator;
@@ -104,10 +104,10 @@ public:
 
     // get the start/end of a zLayer
     unsigned int getLayerStartIndex(double zLayerTarget, unsigned int hint = 0) const;
-    unsigned int getLayerEndIndex(double zLayerTarget, unsigned int hint = -1) const;
+    unsigned int getLayerEndIndex(double zLayerTarget, unsigned int hint = -1u) const;
 
     unsigned int getLayerOrigStartIndex(double zLayerTarget, unsigned int hint = 0) const;
-    unsigned int getLayerOrigEndIndex(double zLayerTarger, unsigned int hint = -1) const;
+    unsigned int getLayerOrigEndIndex(double zLayerTarger, unsigned int hint = -1u) const;
 
     // general accessors
     inline unsigned int getFileSize(void) const {return fileSize;}

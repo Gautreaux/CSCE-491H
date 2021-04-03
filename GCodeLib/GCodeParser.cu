@@ -3,7 +3,7 @@
 #include <sstream>
 #include <vector>
 
-#include "GCodeParser.h"
+#include "GCodeParser.cuh"
 #include "../pch.h"
 
 GCodeParser::GCodeParser(const std::string filePath) : errorFlags(0), fileSize(0), filePath(filePath) {
@@ -360,7 +360,7 @@ unsigned char GCodeParser::convertParseValid(GCodeParser::ErrorTypes p) const {
 };
 
 const GCodeSegment& GCodeParser::at(unsigned int i) const{
-    if(i < 0 || i > numberSegments()){
+    if(i > numberSegments()){
         throw std::out_of_range("");
     }
 
@@ -368,7 +368,7 @@ const GCodeSegment& GCodeParser::at(unsigned int i) const{
 }
 
 const GCodeSegment& GCodeParser::orig_at(unsigned int i) const{
-    if(i < 0 || i > numberOrigSegments()){
+    if(i > numberOrigSegments()){
         throw std::out_of_range("");
     }
 

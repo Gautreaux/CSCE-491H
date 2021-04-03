@@ -1,4 +1,4 @@
-#include "GCodeSegment.h"
+#include "GCodeSegment.cuh"
 
 GCodeSegment::GCodeSegment(const Point3& startPoint, const Point3& endPoint, double printAmount) :
     LineSegment(startPoint, endPoint)
