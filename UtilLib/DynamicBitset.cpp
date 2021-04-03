@@ -131,7 +131,7 @@ bool DynamicBitset::set(const unsigned int i, const bool value){
     if(value == true){
         ((char*)bitset)[byte] |= (1 << remainder);
     }else{
-        ((char*)bitset)[byte] &= ((1 << DBS_SOC) ^ (1 << remainder));
+        ((char*)bitset)[byte] &= (~(1 << remainder));
     }
 
     //update the setcount if the bit actually changed state

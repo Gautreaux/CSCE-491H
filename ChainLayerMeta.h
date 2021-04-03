@@ -1,5 +1,10 @@
 #pragma once
 
+#ifdef __NVCC__
+#define PRECACHE_SEGMENT_COLLISIONS
+// #define PRECACHE_CHECK
+#endif
+
 #include "pch.h"
 
 #include <algorithm> // for sort
@@ -36,6 +41,12 @@ protected:
 
     //which zLayer is this meta for
     const double zLayer;
+
+#ifdef PRECACHE_SEGMENT_COLLISIONS
+    std::vector<DynamicBitset> precache;
+
+    void buildPreCache(void);
+#endif
 public:
 //constructors
     ChainLayerMeta(const GCodeParser& gcp, const double zLayer);
@@ -127,6 +138,9 @@ public:
     }
     inline unsigned int getNumSegmentsInLayer(void) const {
         return totalSegments;
+    }
+    inline const GCodeSegment& getSegmentByLayerIndex(const unsigned int i) const {
+        return gcp.at(segmentTranslation.at(i));
     }
 
 //DEBUG functions

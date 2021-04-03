@@ -4,6 +4,16 @@
 unsigned int ChainLayerMeta::resolveChainPair(const Chain& chainA, 
     const Chain& chainB) const
 {
+#ifdef PRECACHE_CHECK
+#ifdef DEBUG_3
+std::cout << "total Print segments: " << totalPrintSegments << std::endl;
+#endif //DEBUG_3
+    assert(precache.size() == totalPrintSegments);
+    for(const auto& DBS : precache){
+        assert(DBS.size() == totalPrintSegments);
+    }
+#endif
+
     unsigned int maxLen = std::min(chainA.getChainLength(), chainB.getChainLength());
     for(unsigned int i = 0; i < maxLen; i++){
         if(!(canAgentAPrintSegmentIndex(chainA.at(i)) &&
@@ -13,9 +23,33 @@ unsigned int ChainLayerMeta::resolveChainPair(const Chain& chainA,
             return i;
         }
 
+#ifdef PRECACHE_CHECK
+#ifdef DEBUG_3
+std::cout << "i: " << i << ", " << chainA.at(i) << " " << chainB.at(i) << " ";
+std::cout.flush();
+#endif //DEBUG_3
+        assert(chainA.at(i) >= 0 && chainA.at(i) < totalPrintSegments);
+        assert(chainB.at(i) >= 0 && chainB.at(i) < totalPrintSegments);
+#ifdef DEBUG_3
+std::cout << "INDEXES_VALID ";
+std::cout.flush();
+std::cout << canMoveSegmentPair(getSegmentByLayerIndex(chainA.at(i)), getSegmentByLayerIndex(chainB.at(i)), true, true) << " ";
+std::cout << precache.at(chainA.at(i)).at(chainB.at(i)) << std::endl;
+#endif //DEBUG_3
+        assert(
+            canMoveSegmentPair(getSegmentByLayerIndex(chainA.at(i)),
+            getSegmentByLayerIndex(chainB.at(i)), true, true) ==
+            precache.at(chainA.at(i)).at(chainB.at(i))
+        );
+#endif
+
         if(
-            canMoveSegmentPair(gcp.at(segmentTranslation.at(chainA.at(i))),
-            gcp.at(segmentTranslation.at(chainB.at(i))), true, true) == false
+#ifndef PRECACHE_SEGMENT_COLLISIONS
+            canMoveSegmentPair(getSegmentByLayerIndex(chainA.at(i)),
+            getSegmentByLayerIndex(chainB.at(i)), true, true) == false
+#else
+            !precache[chainA.at(i)].at(chainB.at(i))
+#endif
         ){
             //we found the first non-printable
             //  so return the number of segments printed
@@ -174,3 +208,59 @@ ChainLayerMeta::ChainLayerMeta(const GCodeParser& gcp, const double layer) :
 }
 
 ChainLayerMeta::~ChainLayerMeta(void){};
+
+
+
+#ifdef PRECACHE_SEGMENT_COLLISIONS
+void ChainLayerMeta::buildPreCache(void){
+#ifndef __NVCC__
+#else
+    assert(precache.size() == 0);
+    precache.resize(totalPrintSegments, totalPrintSegments);
+#ifdef PRECACHE_CHECK
+    assert(precache.size() == totalPrintSegments);
+    for(const auto& DBS : precache){
+        assert(DBS.size() == totalPrintSegments);
+        assert(DBS.getSetCount() == 0);
+    }
+#endif
+    // std::cout << precache[2].size() << " " << precache[2].getSetCount() << std::endl;
+    std::cout << "Starting PreCache..." << std::endl;
+    clock_t startTime = clock();
+    double nextReport = .1;
+    for(unsigned int i = 0; i < totalPrintSegments; i++){
+        for(unsigned int j = 0; j < totalPrintSegments; j++){
+            bool b = precache.at(i).set(j, 
+                canMoveSegmentPair(getSegmentByLayerIndex(i), getSegmentByLayerIndex(j), true, true)
+            );
+#ifdef PRECACHE_CHECK
+            assert(b == false);
+            b = canMoveSegmentPair(getSegmentByLayerIndex(i), getSegmentByLayerIndex(j), true, true);
+            assert(precache.at(i).at(j) == b);
+#endif
+        }
+
+        unsigned int idx = (i+1) * totalPrintSegments;
+        if(((double)(idx) / (totalPrintSegments * totalPrintSegments)) > nextReport){
+            std::cout << nextReport << " ";
+            std::cout.flush();
+            nextReport += .1;
+        }
+    }
+    clock_t endTime = clock();
+    std::cout << std::endl << "Precache done, took seconds: " << double(endTime - startTime)/CLOCKS_PER_SEC << std::endl;
+#ifdef PRECACHE_CHECK
+    assert(precache.size() == totalPrintSegments);
+    for(const auto& DBS : precache){
+        assert(DBS.size() == totalPrintSegments);
+    }
+    for(unsigned int i = 0; i < totalPrintSegments; i++){
+        for(unsigned int j = 0; j < totalPrintSegments; j++){
+            bool b = canMoveSegmentPair(getSegmentByLayerIndex(i), getSegmentByLayerIndex(j), true, true);
+            assert(precache.at(i).at(j) == b);
+        }
+    }
+#endif
+#endif
+}
+#endif
