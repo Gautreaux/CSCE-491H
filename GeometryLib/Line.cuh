@@ -5,6 +5,10 @@
 #include "Point3.cuh"
 #include "Vector3.cuh"
 
+#ifdef NVCC_DEBUG
+#include <sstream>
+#endif
+
 typedef Vector3 Slope;
 
 class Line{

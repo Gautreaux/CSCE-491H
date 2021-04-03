@@ -21,7 +21,7 @@
 #define MB_TO_B (1024*1024)
 #define B_TO_MB (1.0/(MB_TO_B))
 
-#define CEIL_DIVISION(x, y) ((x % y) ? ((x / y) + 1) : (x / y))
+#define CEIL_DIVISION(x, y) (((x) % (y)) ? (((x) / (y)) + 1) : ((x) / (y)))
 
 // these file flags control several print statements and checks in all the files
 //the higher the number, the more printing that occurs
@@ -35,6 +35,8 @@
 #define NVCC_D
 #define NVCC_G
 #endif
+
+#define NVCC_DEBUG
 
 // Ensure that the n-1 debug flag esists for the n debug flag
 #ifdef DEBUG_4

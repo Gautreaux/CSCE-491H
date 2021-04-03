@@ -77,6 +77,24 @@ Point3 Line::getLineIntersectPoint(const Line& other) const {
             std::cout << "Cross1Mag: " << cross1Mag << ", cross2Mag: " << cross2Mag << std::endl;
         }
 #endif
+#ifdef NVCC_DEBUG
+#ifdef __CUDACC__
+        if(other.isOnLine(p) == false){
+            unsigned int idx = (uint64_t)(this) % (1 << 30);
+            printf("(%d) Assertion Failure inbound:\n", idx);
+            printf("(%d) Point p : (%f, %f, %f)\n", idx, p.getX(), p.getY(), p.getZ());
+            printf("(%d) Line (this): [(%f, %f, %f) (%f, %f, %f)]\n", idx,
+                this->getPoint().getX(), this->getPoint().getY(), this->getPoint().getZ(),
+                this->getSlope().getX(), this->getSlope().getY(), this->getSlope().getZ());
+            printf("(%d) Line (other): [(%f, %f, %f) (%f, %f, %f)]\n", idx,
+                other.getPoint().getX(), other.getPoint().getY(), other.getPoint().getZ(),
+                other.getSlope().getX(), other.getSlope().getY(), other.getSlope().getZ());
+            printf("(%d) Offset Vector: (%f, %f, %f)\n", idx,
+                offsetVector.getX(), offsetVector.getY(), offsetVector.getZ());
+            printf("(%d) Cross 1 Mag: %f, Cross 2 Mag: %f\n", idx, cross1Mag, cross2Mag);
+        }
+#endif
+#endif
         assert(other.isOnLine(p));
         return p;
     }

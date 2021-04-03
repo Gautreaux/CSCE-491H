@@ -225,16 +225,15 @@ void ChainLayerMeta::buildPreCache(void){
     clock_t endTime = clock();
     std::cout << std::endl << "Precache done, took seconds: " << double(endTime - startTime)/CLOCKS_PER_SEC << std::endl;
 #ifdef PRECACHE_CHECK
-    assert(precache.size() == totalPrintSegments);
-    for(const auto& DBS : precache){
-        assert(DBS.size() == totalPrintSegments);
-    }
+    std::cout << "Starting precache-check. This is a very slow operation." << std::endl;
     for(unsigned int i = 0; i < totalPrintSegments; i++){
         for(unsigned int j = 0; j < totalPrintSegments; j++){
             bool b = canMoveSegmentPair(getSegmentByLayerIndex(i), getSegmentByLayerIndex(j), true, true);
-            assert(precache.[i][j] == b);
+            // std::cout << i << " " << j << " " << b << std::endl;
+            assert(precache.at(i,j) == b);
         }
     }
+    std::cout << "Pre-cache check done. All passed." << std::endl;
 #endif
 }
 #endif
