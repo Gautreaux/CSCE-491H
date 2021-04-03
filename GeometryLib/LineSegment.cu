@@ -1,7 +1,5 @@
 #include "LineSegment.cuh"
 
-#include <algorithm> // std::min
-
 LineSegment::LineSegment(const Point3& point, const Point3& otherPoint) :
     Line(point, otherPoint), endPoint(otherPoint)
 {
@@ -50,7 +48,7 @@ bool LineSegment::doesSegmentIntersect(const LineSegment& other) const {
         return false;
     }
 
-#ifndef __CUDA_ARCH__
+#ifndef __CUDACC__
     try{
         Point3 intersection = getLineIntersectPoint(other);
         return (isOnSegment(intersection) && other.isOnSegment(intersection));

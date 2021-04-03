@@ -15,6 +15,8 @@
 #include "UtilLib/DynamicBitset.h"
 #include "GCodeLib/GCodeParser.h"
 
+#include "ChainLayerMetaAccelerator.cuh"
+
 typedef std::vector<Chain> ChainList;
 typedef std::pair<unsigned int, unsigned int> UIntPair;
 

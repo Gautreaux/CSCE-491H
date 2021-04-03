@@ -26,10 +26,14 @@
 // these file flags control several print statements and checks in all the files
 //the higher the number, the more printing that occurs
 
-#ifdef __CUDA_ARCH__
+#ifdef __CUDACC__
 #define NVCC_HD __host__ __device__
+#define NVCC_D __device__
+#define NVCC_G __global__
 #else
 #define NVCC_HD
+#define NVCC_D
+#define NVCC_G
 #endif
 
 // Ensure that the n-1 debug flag esists for the n debug flag

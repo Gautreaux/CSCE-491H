@@ -15,7 +15,7 @@ CPPSTD=-std=c++17# which c++ version to use
 CPP_COMP_COM=$(CXX) $(CPPFLAGS) $(CPPSTD)
 CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c -dc --expt-relaxed-constexpr --Werror all-warnings -o $@ $<
 # CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -dc --expt-relaxed-constexpr -Werror all-warnings -o $@ $< OFiles/*.o
-CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) --expt-relaxed-constexpr -Werror all-warnings -o $@ $< OFiles/*.o
+CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -rdc false --expt-relaxed-constexpr -Werror all-warnings -o $@ $< OFiles/*.o
 
 EXECUTABLE=Main
 
@@ -79,10 +79,13 @@ OFiles/ChainStarLog.o : ChainStarLog.cpp ChainStarLog.h OFiles/ChainStarHelper.o
 OFiles/ChainStarHelper.o : ChainStarHelper.cpp ChainStarHelper.h OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-OFiles/ChainLayerMeta.o : ChainLayerMeta.cpp ChainLayerMeta.h OFiles/pch.o OFiles/GCodeParser.o OFiles/DynamicBitset.o OFiles/ChainStarHelper.o
+OFiles/ChainLayerMeta.o : ChainLayerMeta.cpp ChainLayerMeta.h OFiles/pch.o OFiles/GCodeParser.o OFiles/DynamicBitset.o OFiles/ChainStarHelper.o OFiles/ChainLayerMetaAccelerator.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 OFiles/RecomputeFrameworks.o : RecomputeFrameworks.cpp RecomputeFrameworks.h OFiles/ChainLayerMeta.o OFiles/ChainStarHelper.o OFiles/GCodeParser.o OFiles/pch.o
+	$(CC_COMPLIE_NO_LINK_AUTO)
+
+OFiles/ChainLayerMetaAccelerator.o : ChainLayerMetaAccelerator.cu ChainLayerMetaAccelerator.cuh OFiles/LineSegment.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 # util files
@@ -103,7 +106,7 @@ OFiles/ThreadsafeIntGen.o : UtilLib/ThreadsafeIntGen.cpp UtilLib/ThreadsafeIntGe
 
 # run command
 run81191 :
-	./Main gcodeSampleSet/81191.gcode
+	./Main 0 gcodeSampleSet/81191.gcode
 
 
 # Uses builtin .cpp -> .o translation instead

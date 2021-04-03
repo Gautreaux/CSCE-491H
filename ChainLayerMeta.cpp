@@ -1,6 +1,5 @@
 #include "ChainLayerMeta.h"
 
-
 unsigned int ChainLayerMeta::resolveChainPair(const Chain& chainA, 
     const Chain& chainB) const
 {
@@ -213,9 +212,10 @@ ChainLayerMeta::~ChainLayerMeta(void){};
 
 #ifdef PRECACHE_SEGMENT_COLLISIONS
 void ChainLayerMeta::buildPreCache(void){
-#ifndef __NVCC__
-#else
     assert(precache.size() == 0);
+    std::cout << "Starting PreCache..." << std::endl;
+    clock_t startTime = clock();
+#ifndef __NVCC__
     precache.resize(totalPrintSegments, totalPrintSegments);
 #ifdef PRECACHE_CHECK
     assert(precache.size() == totalPrintSegments);
@@ -225,8 +225,6 @@ void ChainLayerMeta::buildPreCache(void){
     }
 #endif
     // std::cout << precache[2].size() << " " << precache[2].getSetCount() << std::endl;
-    std::cout << "Starting PreCache..." << std::endl;
-    clock_t startTime = clock();
     double nextReport = .1;
     for(unsigned int i = 0; i < totalPrintSegments; i++){
         for(unsigned int j = 0; j < totalPrintSegments; j++){
@@ -247,6 +245,9 @@ void ChainLayerMeta::buildPreCache(void){
             nextReport += .1;
         }
     }
+#else
+    // offloadPrecaching(this);
+#endif
     clock_t endTime = clock();
     std::cout << std::endl << "Precache done, took seconds: " << double(endTime - startTime)/CLOCKS_PER_SEC << std::endl;
 #ifdef PRECACHE_CHECK
@@ -260,7 +261,6 @@ void ChainLayerMeta::buildPreCache(void){
             assert(precache.at(i).at(j) == b);
         }
     }
-#endif
 #endif
 }
 #endif

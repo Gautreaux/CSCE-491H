@@ -2,6 +2,8 @@
 
 #include "../pch.h"
 
+#include <algorithm> // std::min
+
 #include "Line.cuh"
 #include "Point3.cuh"
 

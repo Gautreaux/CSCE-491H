@@ -28,7 +28,7 @@ bool Line::isOnLine(const Point3& testPoint) const {
 
 Point3 Line::getLineIntersectPoint(const Line& other) const {
     if(isCollinear(other)){
-#ifndef __CUDA_ARCH__
+#ifndef __CUDACC__
         throw CollinearIntersectionException();
 #else
         return Point3Any();
@@ -55,7 +55,7 @@ Point3 Line::getLineIntersectPoint(const Line& other) const {
     double cross1Mag = cross_product(other.slope, pointsVector).getMagnitude();
     double cross2Mag = cross_product(other.slope, this->slope).getMagnitude();
     if(DOUBLE_EQUAL(cross1Mag, 0) || DOUBLE_EQUAL(cross2Mag, 0)){
-#ifndef __CUDA_ARCH__
+#ifndef __CUDACC__
         throw NoIntersectionException();
 #else
         return Point3Any();
