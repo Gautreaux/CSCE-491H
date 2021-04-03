@@ -1,4 +1,4 @@
-#include "Line.h"
+#include "Line.cuh"
 
 Line::Line(const Point3& point, const Slope& slope) : point(point), slope(slope){};
 

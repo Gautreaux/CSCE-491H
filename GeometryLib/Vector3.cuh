@@ -2,7 +2,7 @@
 
 #include "../pch.h"
 
-#include "Point3.h"
+#include "Point3.cuh"
 
 class Vector3 : public Point3{
 public:

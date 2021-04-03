@@ -1,4 +1,4 @@
-#include "LineSegment.h"
+#include "LineSegment.cuh"
 
 #include <algorithm> // std::min
 

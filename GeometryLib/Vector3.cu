@@ -1,4 +1,4 @@
-#include "Vector3.h"
+#include "Vector3.cuh"
 
 #include "math.h"
 

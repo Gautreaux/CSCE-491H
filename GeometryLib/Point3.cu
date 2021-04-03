@@ -1,4 +1,4 @@
-#include "Point3.h"
+#include "Point3.cuh"
 
 const Point3 Point3::ANY = Point3(
     std::numeric_limits<double>::lowest(),

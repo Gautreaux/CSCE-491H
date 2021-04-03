@@ -2,8 +2,8 @@
 
 #include "../pch.h"
 
-#include "Line.h"
-#include "Point3.h"
+#include "Line.cuh"
+#include "Point3.cuh"
 
 class LineSegment : public Line{
 protected:
