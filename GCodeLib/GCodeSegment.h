@@ -2,7 +2,7 @@
 
 #include "../pch.h"
 
-#include "../GeometryLib/LineSegment.h"
+#include "../GeometryLib/LineSegment.cuh"
 
 class GCodeSegment : public LineSegment{
 private:

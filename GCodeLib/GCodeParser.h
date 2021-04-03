@@ -6,7 +6,7 @@
 #include "../pch.h"
 
 #include "GCodeSegment.h"
-#include "../GeometryLib/Point3.h"
+#include "../GeometryLib/Point3.cuh"
 
 typedef std::vector<GCodeSegment>::const_iterator SegmentIterator;
 typedef std::vector<double>::const_iterator LayerIterator;

@@ -50,7 +50,7 @@ bool LineSegment::doesSegmentIntersect(const LineSegment& other) const {
         return false;
     }
 
-#ifndef __NVCC__
+#ifndef __CUDA_ARCH__
     try{
         Point3 intersection = getLineIntersectPoint(other);
         return (isOnSegment(intersection) && other.isOnSegment(intersection));

@@ -26,7 +26,7 @@
 // these file flags control several print statements and checks in all the files
 //the higher the number, the more printing that occurs
 
-#ifdef __NVCC__
+#ifdef __CUDA_ARCH__
 #define NVCC_HD __host__ __device__
 #else
 #define NVCC_HD
