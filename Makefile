@@ -13,8 +13,8 @@ CPPFLAGS=# empty default value for GCC flags, can be overriden on command line
 CPPSTD=-std=c++17# which c++ version to use
 
 CPP_COMP_COM=$(CXX) $(CPPFLAGS) $(CPPSTD)
-CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c --Werror all-warnings -o $@ $<
-CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -Werror all-warnings -o $@ $< OFiles/*.o
+CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c -dc --expt-relaxed-constexpr --Werror all-warnings -o $@ $<
+CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -dc --expt-relaxed-constexpr -Werror all-warnings -o $@ $< OFiles/*.o
 
 EXECUTABLE=Main
 
@@ -46,22 +46,22 @@ debug : clean
 	make CPPFLAGS=-g
 
 # geometry files 
-OFiles/GCodeParser.o : GCodeLib/GCodeParser.cpp GCodeLib/GCodeParser.h OFiles/GCodeSegment.o OFiles/Point3.o OFiles/pch.o
+OFiles/GCodeParser.o : GCodeLib/GCodeParser.cu GCodeLib/GCodeParser.cuh OFiles/GCodeSegment.o OFiles/Point3.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-OFiles/GCodeSegment.o : GCodeLib/GCodeSegment.cpp GCodeLib/GCodeSegment.h OFiles/LineSegment.o OFiles/pch.o
+OFiles/GCodeSegment.o : GCodeLib/GCodeSegment.cu GCodeLib/GCodeSegment.cuh OFiles/LineSegment.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-OFiles/LineSegment.o : GeometryLib/LineSegment.cpp GeometryLib/LineSegment.h OFiles/Line.o OFiles/Point3.o OFiles/pch.o
+OFiles/LineSegment.o : GeometryLib/LineSegment.cu GeometryLib/LineSegment.cuh OFiles/Line.o OFiles/Point3.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-OFiles/Line.o : GeometryLib/Line.cpp GeometryLib/Line.h OFiles/Point3.o OFiles/Vector3.o OFiles/pch.o
+OFiles/Line.o : GeometryLib/Line.cu GeometryLib/Line.cuh OFiles/Point3.o OFiles/Vector3.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-OFiles/Vector3.o : GeometryLib/Vector3.cpp GeometryLib/Vector3.h OFiles/Point3.o OFiles/pch.o
+OFiles/Vector3.o : GeometryLib/Vector3.cu GeometryLib/Vector3.cuh OFiles/Point3.o OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
-OFiles/Point3.o : GeometryLib/Point3.cpp GeometryLib/Point3.h OFiles/pch.o
+OFiles/Point3.o : GeometryLib/Point3.cu GeometryLib/Point3.cuh OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
 
 OFiles/pch.o : pch.cpp pch.h
@@ -99,18 +99,6 @@ OFiles/FileUtil.o : UtilLib/FileUtil.cpp UtilLib/FileUtil.h OFiles/pch.o
 
 OFiles/ThreadsafeIntGen.o : UtilLib/ThreadsafeIntGen.cpp UtilLib/ThreadsafeIntGen.h OFiles/pch.o
 	$(CC_COMPLIE_NO_LINK_AUTO)
-
-# testing files
-test : tests
-tests : PQTest.exe
-	PQTest.exe > test.txt
-	python CheckPopPush.py
-
-PQTest.exe : TestingCode/PQTest.cpp OFiles/DynamicBitset.o OFiles/RecomputeState.o OFiles/PrunedAStar.o OFiles/Pch.o
-	$(CC_COMPILE_LINK_EXE_AUTO)
-
-PQTest2.exe : TestingCode/PQTest2.cpp OFiles/DynamicBitset.o OFiles/RecomputeState.o OFiles/PrunedAStar.o OFiles/Pch.o
-	$(CC_COMPILE_LINK_EXE_AUTO)
 
 # run command
 run81191 :
