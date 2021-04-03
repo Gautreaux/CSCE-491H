@@ -45,7 +45,7 @@ protected:
     const double zLayer;
 
 #ifdef PRECACHE_SEGMENT_COLLISIONS
-    std::vector<DynamicBitset> precache;
+    const PreCache precache;
 
     void buildPreCache(void);
 #endif

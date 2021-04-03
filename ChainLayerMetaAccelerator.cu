@@ -24,7 +24,7 @@ NVCC_G void precacheChains(char* const bitTable, const LineSegment* const segmen
     }
 }
 
-void offloadPrecaching(
+PreCache offloadPrecaching(
     const unsigned int numberPrintSegments,
     const std::vector<LineSegment>& segmentsList
 ){
@@ -58,11 +58,18 @@ void offloadPrecaching(
 
     cudaMemcpy(segmentsList_device, segmentsList.data(), sizeofSegListBytes, cudaMemcpyHostToDevice);
 
+    const unsigned int threadsPerBlock = 256;
+    const unsigned int numberBlocks =  CEIL_DIVISION(numberPrintSegments, threadsPerBlock);
 
+    precacheChains<<<numberBlocks, threadsPerBlock>>>(outputList_device, segmentsList_device, numberPrintSegments, rowWidth);
 
+    char* const outputList = (char*)malloc(sizeofOutputBytes);
+    cudaMemcpy(outputList, outputList_device, sizeofOutputBytes, cudaMemcpyDeviceToHost);
 
     cudaFree(segmentsList_device);
     cudaFree(outputList_device);
+
+    return PreCache(outputList, numberPrintSegments);
 }
 
 void logCUDAInfo(void){
@@ -88,4 +95,38 @@ void logCUDAInfo(void){
     std::cout << "CUDA Device Count: " << deviceCount << std::endl;
 
     std::cout << "=============================" << std::endl;
+}
+
+PreCache::PreCache(void) : c(nullptr), size(0)
+{};
+
+PreCache::PreCache(const char* const c, const unsigned int s) :
+c(c), size(s)
+{};
+
+PreCache& PreCache::operator=(PreCache&& other){
+    if(c != nullptr){
+        free((void*)c);
+        c = nullptr;
+        size = 0;
+    }
+    size = other.size;
+    c = other.c;
+
+    other.c = nullptr;
+    other.size = 0;
+
+    return *this;
+}
+
+PreCache::~PreCache(void){
+    if(c!=nullptr){
+        free((void*)c);
+        c = nullptr;
+        size = 0;
+    }
+}
+
+bool PreCache::at(const unsigned int i, const unsigned int j) const{
+    return false;
 }

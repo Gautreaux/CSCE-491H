@@ -7,10 +7,6 @@ unsigned int ChainLayerMeta::resolveChainPair(const Chain& chainA,
 #ifdef DEBUG_3
 std::cout << "total Print segments: " << totalPrintSegments << std::endl;
 #endif //DEBUG_3
-    assert(precache.size() == totalPrintSegments);
-    for(const auto& DBS : precache){
-        assert(DBS.size() == totalPrintSegments);
-    }
 #endif
 
     unsigned int maxLen = std::min(chainA.getChainLength(), chainB.getChainLength());
@@ -34,12 +30,12 @@ std::cout << "INDEXES_VALID ";
 std::cout.flush();
 std::cout << canMoveSegmentPair(getSegmentByLayerIndex(chainA.at(i)), getSegmentByLayerIndex(chainB.at(i)), true, true) << " ";
 std::cout << precache.at(chainA.at(i)).at(chainB.at(i)) << std::endl;
-#endif //DEBUG_3
         assert(
             canMoveSegmentPair(getSegmentByLayerIndex(chainA.at(i)),
             getSegmentByLayerIndex(chainB.at(i)), true, true) ==
-            precache.at(chainA.at(i)).at(chainB.at(i))
+            precache.at(chainA.at(i), chainB.at(i))
         );
+#endif //DEBUG_3
 #endif
 
         if(
@@ -47,7 +43,7 @@ std::cout << precache.at(chainA.at(i)).at(chainB.at(i)) << std::endl;
             canMoveSegmentPair(getSegmentByLayerIndex(chainA.at(i)),
             getSegmentByLayerIndex(chainB.at(i)), true, true) == false
 #else
-            !precache[chainA.at(i)].at(chainB.at(i))
+            !precache.at(chainA.at(i),chainB.at(i))
 #endif
         ){
             //we found the first non-printable
@@ -212,46 +208,19 @@ ChainLayerMeta::~ChainLayerMeta(void){};
 
 #ifdef PRECACHE_SEGMENT_COLLISIONS
 void ChainLayerMeta::buildPreCache(void){
-    assert(precache.size() == 0);
     std::cout << "Starting PreCache..." << std::endl;
     clock_t startTime = clock();
 #ifndef __NVCC__
-    precache.resize(totalPrintSegments, totalPrintSegments);
-#ifdef PRECACHE_CHECK
-    assert(precache.size() == totalPrintSegments);
-    for(const auto& DBS : precache){
-        assert(DBS.size() == totalPrintSegments);
-        assert(DBS.getSetCount() == 0);
-    }
-#endif
-    // std::cout << precache[2].size() << " " << precache[2].getSetCount() << std::endl;
-    double nextReport = .1;
-    for(unsigned int i = 0; i < totalPrintSegments; i++){
-        for(unsigned int j = 0; j < totalPrintSegments; j++){
-            bool b = precache.at(i).set(j, 
-                canMoveSegmentPair(getSegmentByLayerIndex(i), getSegmentByLayerIndex(j), true, true)
-            );
-#ifdef PRECACHE_CHECK
-            assert(b == false);
-            b = canMoveSegmentPair(getSegmentByLayerIndex(i), getSegmentByLayerIndex(j), true, true);
-            assert(precache.at(i).at(j) == b);
-#endif
-        }
-
-        unsigned int idx = (i+1) * totalPrintSegments;
-        if(((double)(idx) / (totalPrintSegments * totalPrintSegments)) > nextReport){
-            std::cout << nextReport << " ";
-            std::cout.flush();
-            nextReport += .1;
-        }
-    }
+#error DEPRECATED
 #else
     std::vector<LineSegment> segList;
     segList.reserve(totalPrintSegments);
     for(unsigned int i = 0 ; i < totalPrintSegments; i++){
         segList.push_back(getSegmentByLayerIndex(i));
     }
-    offloadPrecaching(totalPrintSegments, segList);
+    PreCache old = offloadPrecaching(totalPrintSegments, segList);
+    memcpy(const_cast<PreCache*>(&precache), &old, sizeof(PreCache));
+    old.markEmpty();
 #endif
     clock_t endTime = clock();
     std::cout << std::endl << "Precache done, took seconds: " << double(endTime - startTime)/CLOCKS_PER_SEC << std::endl;
@@ -263,7 +232,7 @@ void ChainLayerMeta::buildPreCache(void){
     for(unsigned int i = 0; i < totalPrintSegments; i++){
         for(unsigned int j = 0; j < totalPrintSegments; j++){
             bool b = canMoveSegmentPair(getSegmentByLayerIndex(i), getSegmentByLayerIndex(j), true, true);
-            assert(precache.at(i).at(j) == b);
+            assert(precache.[i][j] == b);
         }
     }
 #endif
