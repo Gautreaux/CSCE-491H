@@ -50,12 +50,20 @@ bool LineSegment::doesSegmentIntersect(const LineSegment& other) const {
         return false;
     }
 
+#ifndef __NVCC__
     try{
         Point3 intersection = getLineIntersectPoint(other);
         return (isOnSegment(intersection) && other.isOnSegment(intersection));
     } catch (const Line::NoIntersectionException& e){
         return false;
     } //let a collinear collision exception pass through ok
+#else
+    Point3 intersection = getLineIntersectPoint(other);
+    if(intersection == Point3Any()){
+        return false;
+    }
+    return (isOnSegment(intersection) && other.isOnSegment(intersection));
+#endif
 }
 
 //TODO - adapted from python code, could be much cleaner

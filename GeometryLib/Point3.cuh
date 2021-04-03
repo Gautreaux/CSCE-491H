@@ -84,3 +84,13 @@ NVCC_HD inline Point3 operator*(const Point3& lhs, const double rhs){
 NVCC_HD inline Point3 operator*(const double lhs, const Point3& rhs){
     return rhs * lhs;
 }
+
+#ifdef __NVCC__
+NVCC_HD inline Point3 Point3Any(void){
+    return Point3(
+        std::numeric_limits<double>::lowest(),
+        std::numeric_limits<double>::lowest(),
+        std::numeric_limits<double>::lowest()
+    );    
+}
+#endif

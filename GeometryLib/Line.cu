@@ -28,7 +28,11 @@ bool Line::isOnLine(const Point3& testPoint) const {
 
 Point3 Line::getLineIntersectPoint(const Line& other) const {
     if(isCollinear(other)){
+#ifndef __NVCC__
         throw CollinearIntersectionException();
+#else
+        return Point3Any();
+#endif
     }
     //if parallel/skew, throw no intersecton?
     //  nah, part below should catch it
@@ -51,7 +55,11 @@ Point3 Line::getLineIntersectPoint(const Line& other) const {
     double cross1Mag = cross_product(other.slope, pointsVector).getMagnitude();
     double cross2Mag = cross_product(other.slope, this->slope).getMagnitude();
     if(DOUBLE_EQUAL(cross1Mag, 0) || DOUBLE_EQUAL(cross2Mag, 0)){
+#ifndef __NVCC__
         throw NoIntersectionException();
+#else
+        return Point3Any();
+#endif
     }
 
     Vector3 offsetVector = this->slope * (cross1Mag/cross2Mag);
