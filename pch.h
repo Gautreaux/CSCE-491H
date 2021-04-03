@@ -26,6 +26,11 @@
 // these file flags control several print statements and checks in all the files
 //the higher the number, the more printing that occurs
 
+#ifdef __NVCC__
+#define NVCC_HD __host__ __device__
+#else
+#define NVCC_HD
+#endif
 
 // Ensure that the n-1 debug flag esists for the n debug flag
 #ifdef DEBUG_4
