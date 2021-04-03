@@ -24,27 +24,37 @@ NVCC_G void precacheChains(char* const bitTable, const LineSegment* const segmen
     }
 }
 
-template<typename CLM_Type>
-void offloadPrecaching(CLM_Type* const clm){
-    const unsigned int numberPrintSegments = clm->getNumberPrintSegmentsInLayer();
+void offloadPrecaching(
+    const unsigned int numberPrintSegments,
+    const std::vector<LineSegment>& segmentsList
+){
+    assert(numberPrintSegments == segmentsList.size());
+
     const unsigned int rowWidth = CEIL_DIVISION(numberPrintSegments, sizeof(char));
-    std::vector<LineSegment> segmentsList;
-    segmentsList.reserve(numberPrintSegments);
-    for(unsigned int i = 0; i < numberPrintSegments; i++){
-        segmentsList.push_back(clm->getSegmentByLayerIndex(i));
-    }
 
     LineSegment* segmentsList_device;
     const unsigned int sizeofSegListBytes = sizeof(LineSegment)*numberPrintSegments;
 
-    auto e = cudaMalloc((void**)&segmentsList_device, sizeofSegListBytes);
-    if(e == cudaErrorMemoryAllocation){
-        std::cout << "Device OOM" << std::endl;
+    char* outputList_device;
+    const unsigned int sizeofOutputBytes = rowWidth * numberPrintSegments;
+
+    std::cout << "Attempting cudaMalloc of segments/output: " << sizeofSegListBytes << " " << sizeofOutputBytes << std::endl;
+
+
+    for(unsigned int i = 0; i < 2 ; i++){
+        auto e = cudaMalloc(
+            ((i == 0) ? ((void**)&segmentsList_device) : (void**)&outputList_device),
+            ((i == 0) ? sizeofSegListBytes : sizeofOutputBytes)
+        );
+        if(e == cudaErrorMemoryAllocation){
+            std::cout << "Device OOM" << std::endl;
+        }
+        if(e != cudaSuccess){
+            std::cout << "Error occurred in CUDA malloc: " << e << std::endl;
+            printf("%s\n", cudaGetErrorString(e));
+            exit(e);
+        };
     }
-    if(e != cudaSuccess){
-        std::cout << "Error occurred in CUDA malloc: " << e << std::endl;
-        exit(e);
-    };
 
     cudaMemcpy(segmentsList_device, segmentsList.data(), sizeofSegListBytes, cudaMemcpyHostToDevice);
 
@@ -52,4 +62,30 @@ void offloadPrecaching(CLM_Type* const clm){
 
 
     cudaFree(segmentsList_device);
+    cudaFree(outputList_device);
+}
+
+void logCUDAInfo(void){
+    std::cout << "=============================" << std::endl;
+    std::cout << "CUDA info:" << std::endl;
+    
+    int driverVersion, runtimeVersion, deviceCount;
+
+    auto e = cudaRuntimeGetVersion(&runtimeVersion);
+    if(e != 0){
+        printf("get runtime CUDA error #%d: %s\n", e, cudaGetErrorString(e));
+    }
+    std::cout << "CUDA Runtime Version: " << runtimeVersion << std::endl;
+    e = cudaDriverGetVersion(&driverVersion);
+    if(e != 0){
+        printf("get version CUDA error #%d: %s\n", e, cudaGetErrorString(e));
+    }
+    std::cout << "CUDA Driver Version: " << driverVersion << std::endl;
+    e = cudaGetDeviceCount(&deviceCount);
+    if(e != 0){
+        printf("get device CUDA error #%d: %s\n", e, cudaGetErrorString(e));
+    }
+    std::cout << "CUDA Device Count: " << deviceCount << std::endl;
+
+    std::cout << "=============================" << std::endl;
 }

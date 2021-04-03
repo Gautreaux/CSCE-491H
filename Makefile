@@ -12,14 +12,14 @@ CXX:=nvcc # which compiler to use
 CPPFLAGS=# empty default value for GCC flags, can be overriden on command line
 CPPSTD=-std=c++17# which c++ version to use
 
-CPP_COMP_COM=$(CXX) $(CPPFLAGS) $(CPPSTD)
+CPP_COMP_COM=$(CXX) $(CPPFLAGS) $(CPPSTD) -gencode=arch=compute_50,code=sm_50 -Wno-deprecated-gpu-targets
 CC_COMPLIE_NO_LINK_AUTO=$(CPP_COMP_COM) -c -dc --expt-relaxed-constexpr --Werror all-warnings -o $@ $<
 # CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -dc --expt-relaxed-constexpr -Werror all-warnings -o $@ $< OFiles/*.o
-CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -rdc false --expt-relaxed-constexpr -Werror all-warnings -o $@ $< OFiles/*.o
+CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) --expt-relaxed-constexpr -Werror all-warnings -o $@ $< OFiles/*.o
 
 EXECUTABLE=Main
 
-$(EXECUTABLE) : Main.cpp OFiles/FileUtil.o OFiles/GCodeParser.o OFiles/ChainStar.o
+$(EXECUTABLE) : Main.cpp OFiles/FileUtil.o OFiles/GCodeParser.o OFiles/ChainStar.o OFiles/ChainLayerMetaAccelerator.o
 	$(CC_COMPILE_LINK_EXE_AUTO)
 
 ChainLinkerTesting : ChainLinkerTesting.cpp OFiles/LineSegment.o OFiles/ChainLayerMeta.o

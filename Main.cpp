@@ -7,6 +7,10 @@
 
 #include "ChainStar.h"
 
+#ifdef __NVCC__
+#include "ChainLayerMetaAccelerator.cuh"
+#endif
+
 using std::cout;
 using std::endl;
 
@@ -105,6 +109,10 @@ int main(int argc, char ** argv){
     printf("\tPath: %s\n", p.path_str.c_str());
     printf("\tType: %s\n", (p.isDirectory ? "DIR" : "FILE"));
     printf("\tMode: %d\n", p.mode);
+
+#ifdef __NVCC__
+    logCUDAInfo();
+#endif
 
     if(p.isDirectory == false){
         //process just the single file

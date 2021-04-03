@@ -13,5 +13,9 @@ NVCC_D inline bool checkCollisions(const LineSegment* const segmentsList,
 NVCC_G void precacheChains(char* const bitTable, const LineSegment* const segmentsList,
     const unsigned int segmentsQty, const unsigned int rowWidth);
 
-template<typename CLM_Type>
-void offloadPrecaching(CLM_Type* const clm);
+void offloadPrecaching(
+    const unsigned int numberPrintSegments,
+    const std::vector<LineSegment>& segmentsList
+);
+
+void logCUDAInfo(void);

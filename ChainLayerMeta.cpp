@@ -246,7 +246,12 @@ void ChainLayerMeta::buildPreCache(void){
         }
     }
 #else
-    // offloadPrecaching(this);
+    std::vector<LineSegment> segList;
+    segList.reserve(totalPrintSegments);
+    for(unsigned int i = 0 ; i < totalPrintSegments; i++){
+        segList.push_back(getSegmentByLayerIndex(i));
+    }
+    offloadPrecaching(totalPrintSegments, segList);
 #endif
     clock_t endTime = clock();
     std::cout << std::endl << "Precache done, took seconds: " << double(endTime - startTime)/CLOCKS_PER_SEC << std::endl;
