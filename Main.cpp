@@ -1,6 +1,10 @@
 #include "pch.h"
 
 #include <iostream>
+#include <atomic>
+#include <chrono>
+#include <mutex>
+#include <thread>
 
 #include "GCodeLib/GCodeParser.h"
 #include "UtilLib/FileUtil.h"
@@ -17,15 +21,19 @@ using std::endl;
 #define DEFAULT_FILEPATH "TestingFiles/simpleRecomputable.gcode"
 #define NO_MODE_PROVIDED -1
 
+#define DEFAULT_THREAD_COUNT 16
+
 struct ParsedArgs{
     bool help;
     bool parseError;
     bool isDirectory;
     std::string path_str;
+    std::string out_path_str;
     int mode;
 
     ParsedArgs() : help(false), parseError(false), 
-        isDirectory(false), path_str(), mode(NO_MODE_PROVIDED)
+        isDirectory(false), path_str(), out_path_str(),
+        mode(NO_MODE_PROVIDED)
         {}
 };
 
@@ -61,6 +69,15 @@ const ParsedArgs parseArgs(const int argc, char ** argv){
         //now it must be a path
         if(p.path_str == ""){
             p.path_str = std::string(thisArg);
+            if(p.path_str.back() != '/'){
+                p.path_str.push_back('/');
+            }
+            continue;
+        }else if(p.out_path_str == ""){
+            p.out_path_str = std::string(thisArg);
+            if(p.out_path_str.back() != '/'){
+                p.out_path_str.push_back('/');
+            }
             continue;
         }
         
@@ -77,6 +94,12 @@ const ParsedArgs parseArgs(const int argc, char ** argv){
             p.parseError = true;
         }
     }
+    
+    if(p.isDirectory && p.out_path_str == ""){
+        printf("Must provide an out path.");
+        p.parseError = true;
+    }
+    
 
     return p;
 }
@@ -91,6 +114,80 @@ void printHelp(void){
 
 void printError(void){
     printf("An error occurred in argument processing, terminating\n");
+}
+
+struct CommonThreadParameters
+{
+public:
+    std::mutex fileListLock;
+
+    std::vector<std::string>& fileNames;
+
+    std::atomic<unsigned int> totalFilesProcessed;
+    std::atomic<unsigned long long> totalBytesValid;
+    std::atomic<unsigned int> threadsRunning;
+    std::atomic<bool> running;
+
+    const std::string inBaseName;
+    const std::string outBaseName;
+
+    CommonThreadParameters(std::vector<std::string>& fileListRef,
+        const std::string& inBase, const std::string& outBase
+    ) :
+    fileNames(fileListRef),
+    totalFilesProcessed(0), totalBytesValid(0),
+    threadsRunning(0), running(true),
+    inBaseName(inBase), outBaseName(outBase)
+    {};
+};
+
+void reportingFunction(const CommonThreadParameters *const CTP){
+    printf("Reporting thread running\n");
+}
+
+void threadFunction(const unsigned int threadID, CommonThreadParameters *const CTP){
+    printf("Thread: %d running\n", threadID);
+
+    std::string s;
+
+    while(true){
+        CTP->fileListLock.lock();
+        if(CTP->fileNames.size() == 0){
+            CTP->fileListLock.unlock();
+            CTP->threadsRunning.fetch_sub(1);
+            if(CTP->threadsRunning.load() == 0){
+                //technically could be run multiple times
+                CTP->running.store(false);
+            }
+            return;
+        }
+        s = CTP->fileNames.back();
+        CTP->fileNames.pop_back();
+        CTP->fileListLock.unlock();
+
+
+        const std::string fileID = s.substr(0, s.length() - strlen(".gcode"));
+        printf("Thread %d procesing %s\n", threadID, fileID.c_str());
+
+        // printf("%s\n", (CTP->inBaseName + s).c_str());
+        GCodeParser gcp(CTP->inBaseName + s);
+
+        if(gcp){
+            for(unsigned int i = 0; i < 4; i++){
+                if(i == 2){
+                    continue;
+                }
+                const std::string outPath = CTP->outBaseName + fileID + "." + std::to_string(i) + ".out";
+
+
+                printf("Thread %d completed mode %s:%d\n", threadID, fileID.c_str(), i);
+            }
+        }else{
+            printf("Parse Error on %s\n", fileID.c_str());
+        }
+
+        CTP->totalFilesProcessed.fetch_add(1);
+    }
 }
 
 
@@ -204,38 +301,33 @@ int main(int argc, char ** argv){
 
         printf("Directory found %u total files\n", totalFiles);
 
-        //number of threads to spawn
+        // number of threads to spawn
         //  should become a command line parameter
-        // unsigned int numThreads = DEFAULT_THREAD_COUNT;
+        unsigned int numThreads = DEFAULT_THREAD_COUNT;
 #ifdef FORCE_SINGLE_THREAD
         numThreads = 1;
 #endif
-        // if(numThreads > 500){
-        //     printf("NumThreads seems extremely high: %u\n", numThreads);
-        //     exit(2);
-        // }
+        if(numThreads > 500){
+            printf("NumThreads seems extremely high: %u\n", numThreads);
+            exit(2);
+        }
 
-        printf("WARNING: threading behavior not yet supported.\n");
+        CommonThreadParameters CTP(files, p.path_str, "");
+        CTP.fileListLock.lock();
 
-        // // generator for which files to process
-        // ThreadsafeIntGen gen;
+        std::vector<std::thread> threads;
+        threads.push_back(std::thread(reportingFunction, &CTP));
+        for(unsigned int i = 0; i < numThreads; i++){
+            threads.push_back(std::thread(threadFunction, i, &CTP));
+        }
+        printf("All threads created\n");
+        CTP.threadsRunning.store(numThreads);
+        CTP.fileListLock.unlock();
+        for(auto& thread : threads){
+            //will block on the reporting thread before the worker threads
+            thread.join();
+        }
 
-        // //create the thread parameters
-        // // CommonThreadParameters CTP(&gen, &files, p.path_str.c_str(), "Reports/GenericReport");
-        // CommonThreadParameters CTP(&gen, &files, p.path_str.c_str(), "Reports/PointsReport");
-
-
-        // std::vector<std::thread> threads;
-        // threads.push_back(std::thread(reportingFunction, &CTP));
-        // for(unsigned int i = 0; i < numThreads; i++){
-        //     threads.push_back(std::thread(threadFunction, i, &CTP));
-        // }
-        // printf("All threads created\n");
-        // for(auto& thread : threads){
-        //     //will block on the reporting thread before the worker threads
-        //     thread.join();
-        // }
-
-        // printf("All threads joined, %u files (%llu bytes) processed\n", CTP.totalProcessed.load(), CTP.totalBytesValid.load());
+        printf("All threads joined, %u files (%llu bytes) processed\n", CTP.totalFilesProcessed.load(), CTP.totalBytesValid.load());
     }
 }

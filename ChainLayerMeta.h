@@ -1,8 +1,8 @@
 #pragma once
 
 #ifdef __NVCC__
-#define PRECACHE_SEGMENT_COLLISIONS
-#define PRECACHE_CHECK
+// #define PRECACHE_SEGMENT_COLLISIONS
+// #define PRECACHE_CHECK
 #endif
 
 #include "pch.h"
