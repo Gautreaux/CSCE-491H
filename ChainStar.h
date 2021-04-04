@@ -169,7 +169,7 @@ LayerResults ChainStar<CLM_Type>::doRecomputeLayer(
     // printf("Starting layer z=%.3f\n", zLayer);
     outStream << "Starting layer z=" << zLayer << "\n";
 
-    CLM_Type clm(gcp, zLayer);
+    CLM_Type clm(gcp, zLayer, id, outStream);
 
     //stores the pairs for the precompute chain that are resolved
     std::vector<PreComputeChain> resolvedPrecomputeChainPairs;

@@ -207,8 +207,8 @@ ChainLayerMeta::~ChainLayerMeta(void){};
 
 
 #ifdef PRECACHE_SEGMENT_COLLISIONS
-void ChainLayerMeta::buildPreCache(const char mode){
-    std::cout << "Starting PreCache..." << std::endl;
+void ChainLayerMeta::buildPreCache(const char mode, const unsigned int id, std::ostream& outStream){
+    outStream << "Starting PreCache..." << std::endl;
     clock_t startTime = clock();
 #ifndef __NVCC__
 #error DEPRECATED
@@ -218,13 +218,14 @@ void ChainLayerMeta::buildPreCache(const char mode){
     for(unsigned int i = 0 ; i < totalPrintSegments; i++){
         segList.push_back(getSegmentByLayerIndex(i));
     }
-    PreCache old = offloadPrecaching(totalPrintSegments, segList, mode);
+    PreCache old = offloadPrecaching(totalPrintSegments, segList, mode, id, outStream);
     memcpy(const_cast<PreCache*>(&precache), &old, sizeof(PreCache));
     old.markEmpty();
 #endif
     clock_t endTime = clock();
-    std::cout << std::endl << "Precache done, took seconds: " << double(endTime - startTime)/CLOCKS_PER_SEC << std::endl;
+    outStream << std::endl << "Precache done, took seconds: " << double(endTime - startTime)/CLOCKS_PER_SEC << std::endl;
 #ifdef PRECACHE_CHECK
+#error fix couts
     std::cout << "Starting precache-check. This is a very slow operation." << std::endl;
     for(unsigned int i = 0; i < totalPrintSegments; i++){
         for(unsigned int j = 0; j < totalPrintSegments; j++){

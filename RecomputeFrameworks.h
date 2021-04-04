@@ -10,7 +10,7 @@
 class TheoreticalModel : public ChainLayerMeta
 {
 public:
-    TheoreticalModel(const GCodeParser& gcp, const double zLayer);
+    TheoreticalModel(const GCodeParser& gcp, const double zLayer, const unsigned int id, std::ostream& outStream);
 
     //return true if A1 can move (and print) A1Seg while A2 Seg does the same
     //  For this model,
@@ -56,7 +56,7 @@ public:
 class CODEXModel : public ChainLayerMeta
 {
 public:
-    CODEXModel(const GCodeParser& gcp, const double zLayer);
+    CODEXModel(const GCodeParser& gcp, const double zLayer, const unsigned int id, std::ostream& outStream);
 
     //return true if A1 can move (and print) A1Seg while A2 Seg does the same
     //  For this model,
@@ -114,7 +114,7 @@ public:
 class CurrentModel : public ChainLayerMeta
 {
 public:
-    CurrentModel(const GCodeParser& gcp, const double zLayer);
+    CurrentModel(const GCodeParser& gcp, const double zLayer, const unsigned int id, std::ostream& outStream);
 
     //return true if A1 can move (and print) A1Seg while A2 Seg does the same
     //  For this model,
@@ -168,7 +168,7 @@ public:
 class RelaxedCurrentModel : public CurrentModel
 {
 public:
-    RelaxedCurrentModel(const GCodeParser& gcp, const double zLayer);
+    RelaxedCurrentModel(const GCodeParser& gcp, const double zLayer, const unsigned int id, std::ostream& outStream);
 
     //relaxed constraints on the is valid position pair
     virtual inline bool isValidPositionPair(

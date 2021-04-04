@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include <vector>
+#include <fstream>
 
 #include "GeometryLib/LineSegment.cuh"
 
@@ -104,7 +105,10 @@ public:
 PreCache offloadPrecaching(
     const unsigned int numberPrintSegments,
     const std::vector<LineSegment>& segmentsList,
-    const char mode
+    const char mode,
+    const unsigned int id, std::ostream& outStream
 );
 
-void logCUDAInfo(void);
+void logCUDAInfo(std::ostream& outStream = std::cout);
+
+void cudaInit(void);

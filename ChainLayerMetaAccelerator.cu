@@ -46,7 +46,8 @@ NVCC_G void precacheChains(char* const bitTable, const LineSegment* const segmen
 PreCache offloadPrecaching(
     const unsigned int numberPrintSegments,
     const std::vector<LineSegment>& segmentsList,
-    const char mode
+    const char mode,
+    const unsigned int id, std::ostream& outStream
 ){
     assert(numberPrintSegments == segmentsList.size());
 
@@ -58,7 +59,7 @@ PreCache offloadPrecaching(
     char* outputList_device;
     const unsigned int sizeofOutputBytes = numberRows * numberPrintSegments;
 
-    std::cout << "Attempting cudaMalloc of segments/output: " << sizeofSegListBytes << " " << sizeofOutputBytes << std::endl;
+    outStream << "Attempting cudaMalloc of segments/output: " << sizeofSegListBytes << " " << sizeofOutputBytes << std::endl;
 
 
     for(unsigned int i = 0; i < 2 ; i++){
@@ -67,12 +68,12 @@ PreCache offloadPrecaching(
             ((i == 0) ? sizeofSegListBytes : sizeofOutputBytes)
         );
         if(e == cudaErrorMemoryAllocation){
-            std::cout << "Device OOM?" << std::endl;
+            outStream << "Device OOM?" << std::endl;
         }
         if(e != cudaSuccess){
-            std::cout << "Error occurred in CUDA malloc: " << e << std::endl;
-            printf("Reason: %s\n", cudaGetErrorString(e));
-            exit(e);
+            outStream << "Error occurred in CUDA malloc: " << e << std::endl;
+            outStream << "Reason: " << cudaGetErrorString(e) << std::endl;
+            throw e;
         };
     }
 
@@ -86,9 +87,8 @@ PreCache offloadPrecaching(
 
     auto e = cudaDeviceSynchronize();
     if(e != cudaSuccess){
-        printf("CUDA synchronize failed with %d:%s\n",
-            e, cudaGetErrorString(e));
-        exit(e);
+        outStream << "CUDA synchronize failed with " << e << cudaGetErrorString(e) << std::endl;
+        throw e;
     }
 
     char* const outputList = (char*)malloc(sizeofOutputBytes);
@@ -106,38 +106,42 @@ PreCache offloadPrecaching(
     return PreCache(outputList, numberPrintSegments);
 }
 
-void logCUDAInfo(void){
-    std::cout << "=============================" << std::endl;
-    std::cout << "CUDA info:" << std::endl;
+void logCUDAInfo(std::ostream& outStream){
+    outStream << "=============================" << std::endl;
+    outStream << "CUDA info:" << std::endl;
     
     int driverVersion, runtimeVersion, deviceCount;
 
     auto e = cudaRuntimeGetVersion(&runtimeVersion);
     if(e != 0){
-        printf("get runtime CUDA error #%d: %s\n", e, cudaGetErrorString(e));
+        outStream << "get runtime CUDA error #" << e << ": " << cudaGetErrorString(e) << std::endl;
     }
-    std::cout << "CUDA Runtime Version: " << runtimeVersion << std::endl;
+    outStream << "CUDA Runtime Version: " << runtimeVersion << std::endl;
     e = cudaDriverGetVersion(&driverVersion);
     if(e != 0){
-        printf("get version CUDA error #%d: %s\n", e, cudaGetErrorString(e));
+        outStream << "get version CUDA error #" << e << ": " << cudaGetErrorString(e) << std::endl;
     }
-    std::cout << "CUDA Driver Version: " << driverVersion << std::endl;
+    outStream << "CUDA Driver Version: " << driverVersion << std::endl;
     e = cudaGetDeviceCount(&deviceCount);
     if(e != 0){
-        printf("get device CUDA error #%d: %s\n", e, cudaGetErrorString(e));
+        outStream << "get device CUDA error #" << e << ": " << cudaGetErrorString(e) << std::endl;
     }
-    std::cout << "CUDA Device Count: " << deviceCount << std::endl;
+    outStream << "CUDA Device Count: " << deviceCount << std::endl;
 
     printf("!!!REMOVE ME!!!\n");
     e = cudaDeviceSetLimit(cudaLimitPrintfFifoSize, 1*1024*1024*1024);
     if(e != 0){
-        printf("set limit CUDA error #%d: %s\n", e, cudaGetErrorString(e));
+        outStream << "set limit CUDA error #" << e << ": " << cudaGetErrorString(e) << std::endl;
     }
     size_t mySize;
     cudaDeviceGetLimit(&mySize, cudaLimitPrintfFifoSize);
-    std::cout << "Resolved printf size: " << mySize << std::endl;
+    outStream << "Resolved printf size: " << mySize << std::endl;
 
-    std::cout << "=============================" << std::endl;
+    outStream << "=============================" << std::endl;
+}
+
+void cudaInit(void){
+    
 }
 
 PreCache::PreCache(void) : c(nullptr), size(0)

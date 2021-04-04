@@ -249,6 +249,7 @@ int main(int argc, char ** argv){
 
 #ifdef __NVCC__
     logCUDAInfo();
+    cudaInit();
 #endif
 
     if(p.isDirectory == false){
