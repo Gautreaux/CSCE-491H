@@ -1,6 +1,7 @@
 gcodeFullSet/*
 gcodeSampleSet/*
 layerSampleSet/*
+outgcode/*
 */.vs/*
 */.vscode/*
 */__pycache__/
@@ -25,3 +26,4 @@ Main
 sampleRes/*
 *.chaindump
 ChainLinkerTesting
+tempout.txt
