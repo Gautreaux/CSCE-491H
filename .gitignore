@@ -1,5 +1,6 @@
 gcodeFullSet/*
 gcodeSampleSet/*
+outgcode/*
 layerSampleSet/*
 */.vs/*
 */.vscode/*

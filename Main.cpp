@@ -6,6 +6,8 @@
 #include <mutex>
 #include <thread>
 
+#include <fstream>
+
 #include "GCodeLib/GCodeParser.h"
 #include "UtilLib/FileUtil.h"
 
@@ -22,6 +24,7 @@ using std::endl;
 #define NO_MODE_PROVIDED -1
 
 #define DEFAULT_THREAD_COUNT 16
+#define REPORT_INTERVAL_SECONDS 2
 
 struct ParsedArgs{
     bool help;
@@ -141,8 +144,25 @@ public:
     {};
 };
 
-void reportingFunction(const CommonThreadParameters *const CTP){
+void reportingFunction(const CommonThreadParameters *const CTP, const unsigned int totalFiles){
     printf("Reporting thread running\n");
+    
+    unsigned int approx_seconds = 0;
+    unsigned long long lastBytes = 0;
+    while(CTP->running.load() > 0){
+        unsigned int totalProcessed = CTP->totalFilesProcessed.load();
+        unsigned long long bytes = CTP->totalBytesValid.load();
+
+        unsigned long long elapsedBytes = (bytes - lastBytes);
+        double MBPS = ((double)(elapsedBytes * B_TO_MB)/REPORT_INTERVAL_SECONDS);
+        printf("[%u], Running Threads: %u, Processed %u/%u (%.4f%%), Valid bytes %.0fMB (%.4fMB/s)\n",
+            approx_seconds,  CTP->threadsRunning.load(), totalProcessed, totalFiles, (((double)(totalProcessed * 100))/ totalFiles),
+            bytes * B_TO_MB, MBPS
+        );
+        
+        std::this_thread::sleep_for(std::chrono::seconds(REPORT_INTERVAL_SECONDS));
+        approx_seconds += REPORT_INTERVAL_SECONDS;
+    }
 }
 
 void threadFunction(const unsigned int threadID, CommonThreadParameters *const CTP){
@@ -170,18 +190,36 @@ void threadFunction(const unsigned int threadID, CommonThreadParameters *const C
         printf("Thread %d procesing %s\n", threadID, fileID.c_str());
 
         // printf("%s\n", (CTP->inBaseName + s).c_str());
-        GCodeParser gcp(CTP->inBaseName + s);
+        const GCodeParser gcp(CTP->inBaseName + s);
 
         if(gcp){
             for(unsigned int i = 0; i < 4; i++){
                 if(i == 2){
                     continue;
                 }
-                const std::string outPath = CTP->outBaseName + fileID + "." + std::to_string(i) + ".out";
+                const std::string outPath = CTP->outBaseName + fileID + "." + std::to_string(i) + ".recompute_res";
+                
+                std::ofstream out(outPath);
+                out << "Running on thread: " << threadID << std::endl;
 
+                try{
+                    if(i == 0){
+                        ChainStar<TheoreticalModel> csTheoretical;
+                        csTheoretical.doRecompute(gcp);
+                    }else if(i == 1){
+                        ChainStar<CODEXModel> csCODEX;
+                        csCODEX.doRecompute(gcp);
+                    }else if(i == 3){
+                        ChainStar<RelaxedCurrentModel> csCurrent;
+                        csCurrent.doRecompute(gcp);
+                    }
+                    printf("Thread %d completed mode %s:%d\n", threadID, fileID.c_str(), i);
+                }catch(...){
+                    printf("Ane exception occurred in file %s, mode %d\n", fileID.c_str(), i);
+                }
 
-                printf("Thread %d completed mode %s:%d\n", threadID, fileID.c_str(), i);
             }
+            CTP->totalBytesValid.fetch_add(gcp.getFileSize());
         }else{
             printf("Parse Error on %s\n", fileID.c_str());
         }
@@ -312,11 +350,11 @@ int main(int argc, char ** argv){
             exit(2);
         }
 
-        CommonThreadParameters CTP(files, p.path_str, "");
+        CommonThreadParameters CTP(files, p.path_str, p.out_path_str);
         CTP.fileListLock.lock();
 
         std::vector<std::thread> threads;
-        threads.push_back(std::thread(reportingFunction, &CTP));
+        threads.push_back(std::thread(reportingFunction, &CTP, files.size()));
         for(unsigned int i = 0; i < numThreads; i++){
             threads.push_back(std::thread(threadFunction, i, &CTP));
         }
