@@ -200,6 +200,8 @@ LayerResults ChainStar<CLM_Type>::doRecomputeLayer(
         printTime += c.amountPrinted;
     }
 
+    std::cout << "Phase 1 completed." << std::endl;
+
     //time spend transitioning in the recomputed file
     unsigned int totalTransitionsTime = doPhase2LayerRecompute(
         resolvedPrecomputeChainPairs, clm);
@@ -428,11 +430,14 @@ void ChainStar<CLM_Type>::doPhase1LayerRecompute(
             reductionRounds++;
 
             //log info about the progression
-            printf("Reduction round %u: added %u*2 segments, total %u/%u, "
-                   "pending: %lu, %lu\n",
-                   reductionRounds, pcc.amountPrinted, currentPrinted.getSetCount(),
-                   clm.getNumPrintSegmentsInLayer(), cachedChainPairsPQ.size(),
-                   consideredChains.size());
+            // printf("Reduction round %u: added %u*2 segments, total %u/%u, "
+            //        "pending: %lu, %lu\n",
+            //        reductionRounds, pcc.amountPrinted, currentPrinted.getSetCount(),
+            //        clm.getNumPrintSegmentsInLayer(), cachedChainPairsPQ.size(),
+            //        consideredChains.size());
+            if(reductionRounds % 100 == 0){
+                std::cout << "Completed Reduction round " << reductionRounds << " printed " << currentPrinted.getSetCount() << "/" << clm.getNumPrintSegmentsInLayer() << std::endl;
+            }
 
             //construct a new pcc with only printed chains
             PreComputeChain pcc_new(

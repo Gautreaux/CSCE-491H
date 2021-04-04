@@ -5,6 +5,7 @@ outgcode/*
 */.vs/*
 */.vscode/*
 */__pycache__/
+*.gcda
 
 .vs/*
 __pycache__/*

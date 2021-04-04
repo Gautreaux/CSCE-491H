@@ -14,6 +14,7 @@ if __name__ == "__main__":
     parser.add_argument('-t', nargs=1, help="number of threads to spawn, pass negative number for native cores - argument", default=cpu_count())
     parser.add_argument('-o', nargs=1, help="Output directory, if not present, use -d value", default=None)
     parser.add_argument('-l', nargs=1, help="Process only the files that match the provided name list", default=None)
+    parser.add_argument('-m', nargs=1, help="Mode to run", default=0)
     args = parser.parse_args()
     
     if(args.d is None and args.f is None):
@@ -29,6 +30,8 @@ if __name__ == "__main__":
     if(type(args.t) == list):
         # a command line argument was provided
         args.t = int(args.t[0])
+    if(type(args.m) == list):
+        args.m = int(args.m[0])
 
     if(args.t < 0):
         args.t = cpu_count() + args.t
@@ -70,6 +73,8 @@ if __name__ == "__main__":
         
     print(f"Running with {args.t} threads.")
     print(f"Core count is {cpu_count()}.")
+
+    print(f"Running in mode {args.m}")
 
     filesList = [f for f in os.listdir(args.d[0]) if
             f[-len('.gcode'):] == ".gcode"]
@@ -123,13 +128,13 @@ if __name__ == "__main__":
             try:
                 if(processes[i] == None):
                     fpath = next(filesIter)
-                    outPath = args.o[0] + fpath[:-len('.gcode')] + '.recompute_res'
+                    outPath = args.o[0] + fpath[:-len('.gcode')] + "." + str(args.m) + '.recompute_res'
                     fpath = args.d[0] + fpath
                     # print(f"Starting {fpath}->{outPath}")
                     pendingSizes[i] = os.stat(fpath).st_size
                     filePaths[i] = fpath
                     fileHandles[i] = open(outPath, 'w')
-                    processes[i] = subprocess.Popen(["./Main", fpath], stdout=fileHandles[i])
+                    processes[i] = subprocess.Popen(["./Main", str(args.m), fpath], stdout=fileHandles[i])
             except StopIteration:
                 pass
 

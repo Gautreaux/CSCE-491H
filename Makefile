@@ -9,7 +9,7 @@ CC_COMPILE_LINK_EXE_AUTO=$(CPP_COMP_COM) -Wall -o $@ $< OFiles/*.o
 EXECUTABLE=Main
 
 $(EXECUTABLE) : Main.cpp OFiles/FileUtil.o OFiles/GCodeParser.o OFiles/ChainStar.o
-	$(CC_COMPILE_LINK_EXE_AUTO) -lpthread
+	$(CC_COMPILE_LINK_EXE_AUTO)
 
 ChainLinkerTesting : ChainLinkerTesting.cpp OFiles/LineSegment.o OFiles/ChainLayerMeta.o
 	$(CC_COMPILE_LINK_EXE_AUTO)
@@ -28,10 +28,23 @@ clean :
 	rm -f ChainLinkerTesting
 
 release : clean
-	make CPPFLAGS=-Ofast
+	make CPPFLAGS="$(CPPFLAGS) -Ofast -march=native -flto -fno-signed-zeros -fno-trapping-math -frename-registers"
 
 debug : clean
 	make CPPFLAGS=-g
+
+profile : clean
+	make release CPPFLAGS="-fprofile-generate"
+	rm -f OFiles/*.gcda
+	rm *.gcda
+	./Main 0 gcodeSampleSet/808892.gcode
+	./Main 0 gcodeSampleSet/921826.gcode
+	./Main 0 gcodeSampleSet/833379.gcode
+	./Main 0 gcodeSampleSet/892801.gcode
+	./Main 0 gcodeSampleSet/86731.gcode
+	./Main 0 gcodeSampleSet/81191.gcode
+	make clean
+	make release CPPFLAGS="-fprofile-use"
 
 # geometry files 
 OFiles/GCodeParser.o : GCodeLib/GCodeParser.cpp GCodeLib/GCodeParser.h OFiles/GCodeSegment.o OFiles/Point3.o OFiles/pch.o
@@ -102,7 +115,7 @@ PQTest2.exe : TestingCode/PQTest2.cpp OFiles/DynamicBitset.o OFiles/RecomputeSta
 
 # run command
 run81191 :
-	./Main gcodeSampleSet/81191.gcode
+	./Main 0 gcodeSampleSet/81191.gcode
 
 
 # Uses builtin .cpp -> .o translation instead
