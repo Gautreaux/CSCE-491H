@@ -207,7 +207,7 @@ ChainLayerMeta::~ChainLayerMeta(void){};
 
 
 #ifdef PRECACHE_SEGMENT_COLLISIONS
-void ChainLayerMeta::buildPreCache(void){
+void ChainLayerMeta::buildPreCache(const char mode){
     std::cout << "Starting PreCache..." << std::endl;
     clock_t startTime = clock();
 #ifndef __NVCC__
@@ -218,7 +218,7 @@ void ChainLayerMeta::buildPreCache(void){
     for(unsigned int i = 0 ; i < totalPrintSegments; i++){
         segList.push_back(getSegmentByLayerIndex(i));
     }
-    PreCache old = offloadPrecaching(totalPrintSegments, segList);
+    PreCache old = offloadPrecaching(totalPrintSegments, segList, mode);
     memcpy(const_cast<PreCache*>(&precache), &old, sizeof(PreCache));
     old.markEmpty();
 #endif

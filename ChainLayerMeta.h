@@ -47,7 +47,7 @@ protected:
 #ifdef PRECACHE_SEGMENT_COLLISIONS
     const PreCache precache;
 
-    void buildPreCache(void);
+    void buildPreCache(const char mode);
 #endif
 public:
 //constructors

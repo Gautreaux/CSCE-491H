@@ -4,7 +4,7 @@ TheoreticalModel::TheoreticalModel(const GCodeParser& gcp, const double zLayer) 
 ChainLayerMeta(gcp, zLayer)
 {
 #ifdef PRECACHE_SEGMENT_COLLISIONS
-    buildPreCache();
+    buildPreCache(0);
 #endif
 }
 
@@ -12,7 +12,7 @@ CODEXModel::CODEXModel(const GCodeParser& gcp, const double zLayer) :
 ChainLayerMeta(gcp, zLayer)
 {
 #ifdef PRECACHE_SEGMENT_COLLISIONS
-    buildPreCache();
+    buildPreCache(1);
 #endif
 }
 
@@ -20,7 +20,7 @@ CurrentModel::CurrentModel(const GCodeParser& gcp, const double zLayer) :
 ChainLayerMeta(gcp, zLayer)
 {
 #ifdef PRECACHE_SEGMENT_COLLISIONS
-    buildPreCache();
+    buildPreCache(2);
 #endif
 }
 
@@ -28,6 +28,6 @@ RelaxedCurrentModel::RelaxedCurrentModel(const GCodeParser& gcp, const double zL
 CurrentModel(gcp, zLayer)
 {
 #ifdef PRECACHE_SEGMENT_COLLISIONS
-    buildPreCache();
+    buildPreCache(3);
 #endif
 }

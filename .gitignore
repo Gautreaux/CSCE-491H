@@ -25,3 +25,4 @@ Main
 sampleRes/*
 *.chaindump
 ChainLinkerTesting
+tempout.txt

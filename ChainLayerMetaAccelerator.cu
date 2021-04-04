@@ -1,17 +1,7 @@
 #include "ChainLayerMetaAccelerator.cuh"
 
-NVCC_D bool checkCollisions(const LineSegment* const segmentsList,
-    unsigned int a1Index, unsigned int a2Index)
-{
-    // if(a1Index == 0 && a2Index == 4){
-    //     bool b = DOUBLE_GEQ(segmentsList[a1Index].minSeperationDistance(segmentsList[a2Index]), 25.0);
-    //     printf("CUDA i = 0, j = 4: %d\n", b);
-    // }
-    return DOUBLE_GEQ(segmentsList[a1Index].minSeperationDistance(segmentsList[a2Index]), 25.0);
-}
-
 NVCC_G void precacheChains(char* const bitTable, const LineSegment* const segmentsList,
-    const unsigned int segmentsQty)
+    const unsigned int segmentsQty, const char mode)
 {
     const unsigned int mySegentIndex = threadIdx.x + blockIdx.x * blockDim.x;
     if(mySegentIndex >= segmentsQty){
@@ -28,7 +18,15 @@ NVCC_G void precacheChains(char* const bitTable, const LineSegment* const segmen
 
             // printf("CALC: %d %d\n", mySegentIndex, ctr);
 
-            bool b = checkCollisions(segmentsList, mySegentIndex, ctr);
+            bool b;
+            switch (mode)
+            {
+            case 0: (b = theoretical_canMoveSegmentPair(segmentsList[mySegentIndex], segmentsList[ctr])); break;
+            case 1: (b = codex_canMoveSegmentPair(segmentsList[mySegentIndex], segmentsList[ctr])); break;
+            case 2: (b = current_canMoveSegmentPair(segmentsList[mySegentIndex], segmentsList[ctr])); break;
+            case 3: (b = relaxed_canMoveSegmentPair(segmentsList[mySegentIndex], segmentsList[ctr])); break;
+            default: b = false; break;
+            }
             c |= (((b) ? 1 : 0) << j);
 
             // if(mySegentIndex == 0 && (ctr == 4 || ctr == 32 || ctr == 162 || ctr == 196)){
@@ -47,7 +45,8 @@ NVCC_G void precacheChains(char* const bitTable, const LineSegment* const segmen
 
 PreCache offloadPrecaching(
     const unsigned int numberPrintSegments,
-    const std::vector<LineSegment>& segmentsList
+    const std::vector<LineSegment>& segmentsList,
+    const char mode
 ){
     assert(numberPrintSegments == segmentsList.size());
 
@@ -83,7 +82,7 @@ PreCache offloadPrecaching(
     const unsigned int threadsPerBlock = 256;
     const unsigned int numberBlocks =  CEIL_DIVISION(numberPrintSegments, threadsPerBlock);
 
-    precacheChains<<<numberBlocks, threadsPerBlock>>>(outputList_device, segmentsList_device, numberPrintSegments);
+    precacheChains<<<numberBlocks, threadsPerBlock>>>(outputList_device, segmentsList_device, numberPrintSegments, mode);
 
     auto e = cudaDeviceSynchronize();
     if(e != cudaSuccess){

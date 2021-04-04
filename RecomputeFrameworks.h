@@ -19,7 +19,7 @@ public:
         const LineSegment& a1Seg, const LineSegment& a2Seg,
         const bool isA1Print = false, const bool isA2Print = false
     ) const override {
-        return DOUBLE_GEQ(a1Seg.minSeperationDistance(a2Seg), CHAIN_MIN_SEPERATION_MM);
+        return theoretical_canMoveSegmentPair(a1Seg, a2Seg, isA1Print, isA2Print);
     }
 
     //return true if the A1 position and the A2 position can be held concurrently
@@ -66,13 +66,7 @@ public:
         const LineSegment& a1Seg, const LineSegment& a2Seg,
         const bool isA1Print = false, const bool isA2Print = false
     ) const override {
-        return (
-            DOUBLE_LEQ(
-                std::max(a1Seg.getStartPoint().getX(), a1Seg.getEndPoint().getX()),
-                std::min(a2Seg.getStartPoint().getX(), a2Seg.getEndPoint().getX())
-            ) &&
-            DOUBLE_GEQ(a1Seg.minSeperationDistance(a2Seg), CHAIN_MIN_SEPERATION_MM)
-        );
+        return (codex_canMoveSegmentPair(a1Seg, a2Seg, isA1Print, isA2Print));
     }
 
     //return true if the A1 position and the A2 position can be held concurrently
@@ -130,11 +124,7 @@ public:
         const LineSegment& a1Seg, const LineSegment& a2Seg,
         const bool isA1Print = false, const bool isA2Print = false
     ) const override {
-        return (
-            isValidPositionPair(a1Seg.getStartPoint(), a2Seg.getStartPoint()) &&
-            isValidPositionPair(a1Seg.getEndPoint(), a2Seg.getEndPoint()) &&
-            DOUBLE_GEQ(a1Seg.minSeperationDistance(a2Seg), CHAIN_MIN_SEPERATION_MM)
-        );
+        return current_canMoveSegmentPair(a1Seg, a2Seg, isA1Print, isA2Print);
     }
 
     //return true if the A1 position and the A2 position can be held concurrently
@@ -145,11 +135,7 @@ public:
     virtual inline bool isValidPositionPair(
         const Point3& a1Pos, const Point3& a2Pos
     ) const override {
-        return  (
-            DOUBLE_EQUAL(a1Pos.getX(), a2Pos.getX()) &&
-            DOUBLE_GEQ(a1Pos.getY(), a2Pos.getY()) &&
-            DOUBLE_GEQ(getPointDistance(a1Pos, a2Pos), CHAIN_MIN_SEPERATION_MM)
-        );
+        return  current_isValidPositionPair(a1Pos, a2Pos);
     }
 
     //return true if A2 can hold A2 pos while A1 moves the A1 segment
@@ -188,10 +174,16 @@ public:
     virtual inline bool isValidPositionPair(
         const Point3& a1Pos, const Point3& a2Pos
     ) const override {
-        return (
-            DOUBLE_GEQ(getPointDistance(a1Pos, a2Pos), CHAIN_MIN_SEPERATION_MM) &&
-            DOUBLE_GEQ(a1Pos.getY(), a2Pos.getY()) &&
-            DOUBLE_LEQ(abs(a1Pos.getX() - a2Pos.getX()), 5)
-        );
+        return relaxed_isValidPositionPair(a1Pos, a2Pos);
+    }
+
+    //return true if A1 can move (and print) A1Seg while A2 Seg does the same
+    //  For this model,
+    //      A1 and A2 are sufficiently seperated
+    virtual inline bool canMoveSegmentPair(
+        const LineSegment& a1Seg, const LineSegment& a2Seg,
+        const bool isA1Print = false, const bool isA2Print = false
+    ) const override {
+        return relaxed_canMoveSegmentPair(a1Seg, a2Seg, isA1Print, isA2Print);
     }
 };
