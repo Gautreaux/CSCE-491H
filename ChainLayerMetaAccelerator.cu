@@ -1,5 +1,7 @@
 #include "ChainLayerMetaAccelerator.cuh"
 
+cudaStream_t streamList[NUMBER_CUDA_STREAMS];
+
 NVCC_G void precacheChains(char* const bitTable, const LineSegment* const segmentsList,
     const unsigned int segmentsQty, const char mode)
 {
@@ -77,22 +79,23 @@ PreCache offloadPrecaching(
         };
     }
 
-    cudaMemcpy(segmentsList_device, segmentsList.data(), sizeofSegListBytes, cudaMemcpyHostToDevice);
-    cudaMemset(outputList_device, 0, sizeofOutputBytes);
+    cudaMemcpyAsync(segmentsList_device, segmentsList.data(), sizeofSegListBytes, cudaMemcpyHostToDevice, streamList[id]);
+    cudaMemsetAsync(outputList_device, 0, sizeofOutputBytes, streamList[id]);
 
     const unsigned int threadsPerBlock = 256;
     const unsigned int numberBlocks =  CEIL_DIVISION(numberPrintSegments, threadsPerBlock);
 
-    precacheChains<<<numberBlocks, threadsPerBlock>>>(outputList_device, segmentsList_device, numberPrintSegments, mode);
+    precacheChains<<<numberBlocks, threadsPerBlock, 0, streamList[id]>>>(outputList_device, segmentsList_device, numberPrintSegments, mode);
 
-    auto e = cudaDeviceSynchronize();
+    char* const outputList = (char*)malloc(sizeofOutputBytes);
+    cudaMemcpyAsync(outputList, outputList_device, sizeofOutputBytes, cudaMemcpyDeviceToHost, streamList[id]);
+
+    auto e = cudaStreamSynchronize(streamList[id]);
     if(e != cudaSuccess){
         outStream << "CUDA synchronize failed with " << e << cudaGetErrorString(e) << std::endl;
         throw e;
     }
 
-    char* const outputList = (char*)malloc(sizeofOutputBytes);
-    cudaMemcpy(outputList, outputList_device, sizeofOutputBytes, cudaMemcpyDeviceToHost);
 
     // for(unsigned int i = 0; i < sizeofOutputBytes; i++){
     //     int k;
@@ -141,7 +144,9 @@ void logCUDAInfo(std::ostream& outStream){
 }
 
 void cudaInit(void){
-    
+    for(unsigned int i = 0; i < NUMBER_CUDA_STREAMS; i++){
+        cudaStreamCreate(&(streamList[i]));
+    }
 }
 
 PreCache::PreCache(void) : c(nullptr), size(0)

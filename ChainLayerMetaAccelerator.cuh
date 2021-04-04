@@ -7,7 +7,11 @@
 
 #include "GeometryLib/LineSegment.cuh"
 
+#include <cuda_runtime.h>
+
 #define ACCELERATOR_MIN_SEPERATION 25.0
+
+#define NUMBER_CUDA_STREAMS 16
 
 NVCC_HD inline bool theoretical_canMoveSegmentPair(
     const LineSegment& a1Seg, const LineSegment& a2Seg,

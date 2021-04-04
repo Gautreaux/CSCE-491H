@@ -217,7 +217,7 @@ void threadFunction(const unsigned int threadID, CommonThreadParameters *const C
                     }
                     printf("Thread %d completed mode %s:%d\n", threadID, fileID.c_str(), i);
                 }catch(...){
-                    printf("Ane exception occurred in file %s, mode %d\n", fileID.c_str(), i);
+                    printf("An exception occurred in file %s, mode %d\n", fileID.c_str(), i);
                 }
 
             }
