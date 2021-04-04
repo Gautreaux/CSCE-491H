@@ -7,6 +7,7 @@
 #include <thread>
 
 #include <fstream>
+#include <iomanip>
 
 #include "GCodeLib/GCodeParser.h"
 #include "UtilLib/FileUtil.h"
@@ -201,17 +202,18 @@ void threadFunction(const unsigned int threadID, CommonThreadParameters *const C
                 
                 std::ofstream out(outPath);
                 out << "Running on thread: " << threadID << std::endl;
+                out << std::fixed << std::setprecision(3);
 
                 try{
                     if(i == 0){
                         ChainStar<TheoreticalModel> csTheoretical;
-                        csTheoretical.doRecompute(gcp);
+                        csTheoretical.doRecompute(gcp, threadID, out);
                     }else if(i == 1){
                         ChainStar<CODEXModel> csCODEX;
-                        csCODEX.doRecompute(gcp);
+                        csCODEX.doRecompute(gcp, threadID, out);
                     }else if(i == 3){
                         ChainStar<RelaxedCurrentModel> csCurrent;
-                        csCurrent.doRecompute(gcp);
+                        csCurrent.doRecompute(gcp, threadID, out);
                     }
                     printf("Thread %d completed mode %s:%d\n", threadID, fileID.c_str(), i);
                 }catch(...){

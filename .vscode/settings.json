@@ -75,6 +75,9 @@
         "ratio": "cpp",
         "string_view": "cpp",
         "*.cuh": "cpp",
-        "*.cu": "cpp"
+        "*.cu": "cpp",
+        "condition_variable": "cpp",
+        "mutex": "cpp",
+        "iomanip": "cpp"
     }
 }

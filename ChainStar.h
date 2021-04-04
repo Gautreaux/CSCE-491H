@@ -10,6 +10,8 @@
 #include <vector>
 #include <queue>
 
+#include <fstream>
+
 #include "ChainStarHelper.h"
 #include "ChainStarLog.h"
 #include "ChainLayerMeta.h"
@@ -72,7 +74,10 @@ protected:
     };
 
     //run recompute on the specific layer
-    LayerResults doRecomputeLayer(const GCodeParser& gcp, const double zLayer);
+    LayerResults doRecomputeLayer(
+        const GCodeParser& gcp, const double zLayer,
+        const unsigned int id, std::ostream& outStream
+    );
 
     //do the phase 1 layer recompute:
     //  Matching segment chains together into pairs
@@ -80,14 +85,14 @@ protected:
     //      specifically, the resolveChainPairs function
     void doPhase1LayerRecompute(
         std::vector<PreComputeChain>& resolvedPrecomputeChainPairs,
-        const CLM_Type& clm
+        const CLM_Type& clm, const unsigned int id, std::ostream& outStream
     );
 
     //do the phase 2 layer recompute:
     //  Linking endpoints of chain pairs
     unsigned int doPhase2LayerRecompute(
         std::vector<PreComputeChain>& resolvedPrecomputeChainPairs,
-        const CLM_Type& clm
+        const CLM_Type& clm, const unsigned int id, std::ostream& outStream
     );
 
 public:
@@ -99,11 +104,11 @@ public:
     //recompute on the provided GCP file
     //  define pre-processor flag 'SINGLE_LAYER_ONLY' to run just the first layer
     //TODO - return type?
-    void doRecompute(const GCodeParser& gcp);
+    void doRecompute(const GCodeParser& gcp, const unsigned int id = 0, std::ostream& outStream = std::cout);
 };
 
 template <class CLM_Type> 
-void ChainStar<CLM_Type>::doRecompute(const GCodeParser& gcp){
+void ChainStar<CLM_Type>::doRecompute(const GCodeParser& gcp, const unsigned int id, std::ostream& outStream){
     assert(gcp.isValid());
 
     unsigned int totalTimeSum = 0;
@@ -116,7 +121,7 @@ void ChainStar<CLM_Type>::doRecompute(const GCodeParser& gcp){
 
     for(const double layer : gcp.getLayerVecRef()){
         //TODO - some return type stuff here?
-        LayerResults r = doRecomputeLayer(gcp, layer);
+        LayerResults r = doRecomputeLayer(gcp, layer, id, outStream);
 
         totalTimeSum += std::get<0>(r);
         rawTimeSum += std::get<1>(r);
@@ -130,35 +135,49 @@ void ChainStar<CLM_Type>::doRecompute(const GCodeParser& gcp){
     }
 
     clock_t endTime = clock();
-    printf("Recompute duration (s): %.3f\n", double(endTime-startTime)/CLOCKS_PER_SEC);
+    // printf("Recompute duration (s): %.3f\n", double(endTime-startTime)/CLOCKS_PER_SEC);
 
-    printf("Ran %u layers\n", layersRun);
-    printf("Total new time: %u\n", totalTimeSum);
-    printf("Total base time: %u\n", rawTimeSum);
-    printf("Total raw print time: %u\n", rawPrintTimeSum);
-    printf("Total new print time: %u\n", printTimeSum);
+    // printf("Ran %u layers\n", layersRun);
+    // printf("Total new time: %u\n", totalTimeSum);
+    // printf("Total base time: %u\n", rawTimeSum);
+    // printf("Total raw print time: %u\n", rawPrintTimeSum);
+    // printf("Total new print time: %u\n", printTimeSum);
 
-    printf("Total Efficiency: base/new base: %.3f (Optimal > 2)\n",
-        double(rawTimeSum)/totalTimeSum);
-    printf("Print Efficiency: print/ new print: %.3f (Optimal = 2)\n",
-        double(rawPrintTimeSum)/printTimeSum);
+    // printf("Total Efficiency: base/new base: %.3f (Optimal > 2)\n",
+    //     double(rawTimeSum)/totalTimeSum);
+    // printf("Print Efficiency: print/ new print: %.3f (Optimal = 2)\n",
+    //     double(rawPrintTimeSum)/printTimeSum);
+
+    
+    outStream << "Recompute duration (s): " << double(endTime-startTime)/CLOCKS_PER_SEC << "\n";
+    outStream << "Ran " << layersRun << " layers\n";
+    outStream << "Total new time: " << totalTimeSum << "\n";
+    outStream << "Total base time: " << rawTimeSum << "\n";
+    outStream << "Total raw print time: " << rawPrintTimeSum << "\n";
+    outStream << "Total new print time: " << printTimeSum << "\n";
+
+    outStream << "Total Efficiency: base/new base: " << double(rawTimeSum)/totalTimeSum << " (Optimal > 2)\n";
+    outStream << "Total Efficiency: print/new print: " << double(rawPrintTimeSum)/printTimeSum << " (Optimal = 2)\n";
 }
 
 template <class CLM_Type>
 LayerResults ChainStar<CLM_Type>::doRecomputeLayer(
-    const GCodeParser &gcp, const double zLayer)
+    const GCodeParser &gcp, const double zLayer,
+    const unsigned int id, std::ostream& outStream)
 {
 
-    printf("Starting layer z=%.3f\n", zLayer);
+    // printf("Starting layer z=%.3f\n", zLayer);
+    outStream << "Starting layer z=" << zLayer << "\n";
 
     CLM_Type clm(gcp, zLayer);
 
     //stores the pairs for the precompute chain that are resolved
     std::vector<PreComputeChain> resolvedPrecomputeChainPairs;
 
-    doPhase1LayerRecompute(resolvedPrecomputeChainPairs, clm);
+    doPhase1LayerRecompute(resolvedPrecomputeChainPairs, clm, id, outStream);
 
 #ifdef DEBUG
+#error "DIABLED"
     //debug checking to ensure this is a valid config
     printf("Starting pre-phase 2 checks\n");
     printf("Total chain pairs: %lu\n", resolvedPrecomputeChainPairs.size());
@@ -202,7 +221,7 @@ LayerResults ChainStar<CLM_Type>::doRecomputeLayer(
 
     //time spend transitioning in the recomputed file
     unsigned int totalTransitionsTime = doPhase2LayerRecompute(
-        resolvedPrecomputeChainPairs, clm);
+        resolvedPrecomputeChainPairs, clm, id, outStream);
 
     //total time in the recomputed file
     unsigned int totalTime = printTime + totalTransitionsTime;
@@ -214,17 +233,22 @@ LayerResults ChainStar<CLM_Type>::doRecomputeLayer(
     unsigned int rawPrintTime = clm.getNumPrintSegmentsInLayer();
 
     //debug info
-    std::cout << "Total Print Time: " << printTime << std::endl;
-    std::cout << "Total Transitions Time: " << totalTransitionsTime << std::endl;
-    std::cout << "Total Time: " << totalTime << std::endl;
+    outStream << "Total Print Time: " << printTime << std::endl;
+    outStream << "Total Transitions Time: " << totalTransitionsTime << std::endl;
+    outStream << "Total Time: " << totalTime << std::endl;
 
-    std::cout << "Base Print Time: " << rawTime  << std::endl;
-    printf("Efficiency: %.3f (Optimal = 2)\n", double(rawTime)/totalTime);
-    printf("Time %%: %.3f%% (Optimal = 50%%)\n", double(totalTime*100)/(rawTime));
+    outStream << "Base Print Time: " << rawTime  << std::endl;
+    // printf("Efficiency: %.3f (Optimal = 2)\n", double(rawTime)/totalTime);
+    // printf("Time %%: %.3f%% (Optimal = 50%%)\n", double(totalTime*100)/(rawTime));
+    outStream << "Efficiency: " << double(rawTime)/totalTime << " (Optimal = 2)\n";
+    outStream << "Time %: " << double(totalTime*100)/rawTime << " (Optimal = 50%)\n";
 
-    std::cout << "Raw Print Time: " << rawPrintTime << std::endl;
-    printf("Efficiency: %.3f (Optimal = 2)\n", double(rawPrintTime)/totalTime);
-    printf("Time %%: %.3f%% (Optimal = 50%%)\n", double(totalTime*100)/(rawPrintTime));
+    outStream << "Raw Print Time: " << rawPrintTime << std::endl;
+    // printf("Efficiency: %.3f (Optimal = 2)\n", double(rawPrintTime)/totalTime);
+    // printf("Time %%: %.3f%% (Optimal = 50%%)\n", double(totalTime*100)/(rawPrintTime));
+    outStream << "Efficiency: " << double(rawPrintTime)/totalTime << " (Optimal = 2)\n";
+    outStream << "Time %: " << double(totalTime*100)/(rawPrintTime) << " (Optimal = 50%)\n";
+
 
     //TODO - final phases thingies
     //debug check that the resulting path is
@@ -240,7 +264,7 @@ LayerResults ChainStar<CLM_Type>::doRecomputeLayer(
 template <class CLM_Type>
 void ChainStar<CLM_Type>::doPhase1LayerRecompute(
     std::vector<PreComputeChain> &resolvedPrecomputeChainPairs,
-    const CLM_Type &clm)
+    const CLM_Type &clm, const unsigned int id, std::ostream& outStream)
 {
     const int numberSegmentsInLayer = clm.getNumPrintSegmentsInLayer();
 
@@ -428,11 +452,14 @@ void ChainStar<CLM_Type>::doPhase1LayerRecompute(
             reductionRounds++;
 
             //log info about the progression
-            printf("Reduction round %u: added %u*2 segments, total %u/%u, "
-                   "pending: %lu, %lu\n",
-                   reductionRounds, pcc.amountPrinted, currentPrinted.getSetCount(),
-                   clm.getNumPrintSegmentsInLayer(), cachedChainPairsPQ.size(),
-                   consideredChains.size());
+            // printf("Reduction round %u: added %u*2 segments, total %u/%u, "
+            //        "pending: %lu, %lu\n",
+            //        reductionRounds, pcc.amountPrinted, currentPrinted.getSetCount(),
+            //        clm.getNumPrintSegmentsInLayer(), cachedChainPairsPQ.size(),
+            //        consideredChains.size());
+            outStream << "Reduction round " << reductionRounds << " added " << pcc.amountPrinted << "*2 segments, ";
+            outStream << "total " << currentPrinted.getSetCount() << "/" << clm.getNumPrintSegmentsInLayer();
+            outStream << ", pending " << cachedChainPairsPQ.size() << ", " << consideredChains.size() << "\n"; 
 
             //construct a new pcc with only printed chains
             PreComputeChain pcc_new(
@@ -473,6 +500,7 @@ void ChainStar<CLM_Type>::doPhase1LayerRecompute(
 
         //this is a non-valid pcc,
 #ifdef DEBUG //some debug checking and printing
+#error "disabled?"
         printf("All dual move segments resolved.\n");
         printf("Number of printed segments: %u/%u (unprinted: %u)\n",
                currentPrinted.getSetCount(), clm.getNumPrintSegmentsInLayer(),
@@ -545,7 +573,8 @@ void ChainStar<CLM_Type>::doPhase1LayerRecompute(
         }
 #endif
 
-        printf("%lu unmatched sub chains.\n", consideredChains.size() / 2);
+        // printf("%lu unmatched sub chains.\n", consideredChains.size() / 2);
+        outStream << consideredChains.size() / 2 << " unmatched sub chains.\n";
 
         while (currentPrinted.getUnsetCount() > 0)
         {
@@ -583,7 +612,7 @@ void ChainStar<CLM_Type>::doPhase1LayerRecompute(
 template <class CLM_Type>
 unsigned int ChainStar<CLM_Type>::doPhase2LayerRecompute(
     std::vector<PreComputeChain>& resolvedPrecomputeChainPairs,
-    const CLM_Type& clm)
+    const CLM_Type& clm, const unsigned int id, std::ostream& outStream)
 {
     //now link partial chains together in an efficient way
     //  start with the set of all chains
@@ -697,6 +726,7 @@ unsigned int ChainStar<CLM_Type>::doPhase2LayerRecompute(
     }
 
 #ifdef DEBUG
+#error need to change outs
     std::cout << "Linking finished, doing debugging checks.";
     std::vector<unsigned int> unusedStateIndexes;
     for(unsigned int i = 0; i < stateList.size(); i++){
