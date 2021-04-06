@@ -9,7 +9,7 @@ RECOMPUTE_RES_FILE_NAME = "recomputeRes.csv"
 
 RECOMPUTE_EXTENSION = '.recompute_res'
 
-def processResInDirectory(fDir, outDir):
+def processResInDirectory(fDir, outDir, mode):
     fDir = fDir + ('/' if fDir[-1] != '/' else '')
     outDir = outDir + ('/' if outDir[-1] != '/' else '')
 
@@ -18,13 +18,16 @@ def processResInDirectory(fDir, outDir):
     # print(list(os.listdir(fDir))[0])
 
     filesList = [f for f in os.listdir(fDir) if
-        f[-len(RECOMPUTE_EXTENSION):] == RECOMPUTE_EXTENSION]
+        f[-len(RECOMPUTE_EXTENSION):] == RECOMPUTE_EXTENSION and
+        len(f.split(".")) == 3 and
+        int(f.split(".")[1]) == mode]
 
     print(f"Found {len(filesList)} files to process.")
 
     assert(len(filesList) > 0)
 
-    outFilePath = outDir + RECOMPUTE_RES_FILE_NAME
+    t = RECOMPUTE_RES_FILE_NAME.split(".")
+    outFilePath = outDir + "".join([t[0], '.', str(mode), '.', t[1]])
 
     print(f"Writing results to {outFilePath}")
 
@@ -33,7 +36,7 @@ def processResInDirectory(fDir, outDir):
     totalSeconds = 0
 
     with open(outFilePath, 'w') as outFile:
-        headers = ["file_name", "runtime_error", "parse_error", "recompute_duration", "layers_qty", "new_time_total", "base_time_total", "raw_time_total", "new_base_total"]
+        headers = ["file_name", "runtime_error", "parse_error", "recompute_duration", "layers_qty", "new_time_total", "base_time_total", "raw_time_total", "new_print_total"]
         print(str(headers)[1:-1], file=outFile)
 
         for f in filesList:
@@ -69,12 +72,12 @@ def processResInDirectory(fDir, outDir):
                         outList.append(int(l.split(" ")[3]))
 
                         l = next(lineIter)
-                        assert("Total raw time:" in l)
-                        outList.append(int(l.split(" ")[3]))
+                        assert("Total raw print time:" in l)
+                        outList.append(int(l.split(" ")[4]))
 
                         l = next(lineIter)
-                        assert("Total new base: " in l)
-                        outList.append(int(l.split(" ")[3]))
+                        assert("Total new print time: " in l)
+                        outList.append(int(l.split(" ")[4]))
 
                     elif("gcp failed, exiting" in l):
                         assert(hasMatch == False)
@@ -106,7 +109,7 @@ def processResInDirectory(fDir, outDir):
     print(f"CPU Time (hours): {round(totalSeconds/3600, 3)}")
     print(f"CPU Time (days): {round(totalSeconds/(24*3600), 3)}")
 
-def processLogFileInDirectory(fDir, name):
+def processLogFileInDirectory(fDir, name, mode):
     if(name[-len('.log'):] != ".log"):
         print(f"Appending '.log' to provided filename: '{name}'")
         name += '.log'
@@ -116,8 +119,8 @@ def processLogFileInDirectory(fDir, name):
     print(f"Processing log file '{name}' in {fDir}")
 
     fullPath = fDir + name
-    failedFilesPath = fDir + FAILED_FILES_FILE_NAME
-    statsPath = fDir + PERFORMANCE_STATS_FILE_NAME
+    failedFilesPath = fDir + FAILED_FILES_FILE_NAME.replace(".csv", ".") + str(mode) + ".csv"
+    statsPath = fDir + PERFORMANCE_STATS_FILE_NAME.replace(".csv", ".") + str(mode) + ".csv"
 
     failedFilesCount = 0
 
@@ -137,6 +140,11 @@ def processLogFileInDirectory(fDir, name):
                 l = next(lineIter).strip()
                 assert("Core count is " in l)
                 print(l)
+                l = next(lineIter).strip()
+                assert("Running in mode" in l)
+                print(l)
+                m_log = int(l.split(" ")[3])
+                assert(m_log == mode)
                 l = next(lineIter).strip()
                 assert(" files in directory." in l)
                 print(l)
@@ -182,10 +190,14 @@ if __name__ == "__main__":
     parser.add_argument('-d', nargs=1, help=f"Process '{RECOMPUTE_EXTENSION}' files in the specified directory.")
     parser.add_argument('-o', nargs=1, help="Directory for output files and of input log file, if no value provided, use the current working directory", default=[os.getcwd()])
     parser.add_argument('-n', nargs=1, help=f"Name of the .log file, default is '{DEFAULT_LOG_FILE_NAME}'", default=[DEFAULT_LOG_FILE_NAME])
+    parser.add_argument('-m', nargs=1, help="Which mode of output to process. 0,1,2,3?")
 
     args = parser.parse_args()
 
+    args.m = int(args.m[0])
+    assert(args.m in range(5))
+
     if(args.d is not None):
-        processResInDirectory(args.d[0], args.o[0])
+        processResInDirectory(args.d[0], args.o[0], args.m)
     else:
-        processLogFileInDirectory(args.o[0], args.n[0])
+        processLogFileInDirectory(args.o[0], args.n[0], args.m)
