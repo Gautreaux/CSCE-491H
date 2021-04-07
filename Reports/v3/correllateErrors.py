@@ -36,3 +36,4 @@ for i in range(len(sets)):
         assert(len(sets[i].symmetric_difference(sets[j])) == 0)
 
 print("Checks pased: errors consistent in all files")
+print(f"All files contain {len(sets[0])} errors.")

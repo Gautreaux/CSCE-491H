@@ -29,7 +29,9 @@ for path in files:
     print(rawTimeTotalTotal)
     print(printTimeTotalTotal)
 
+    print("Print time efficency (unweighted): ", end = "")
     print(rawTimeTotalTotal / printTimeTotalTotal)
+    print("Total time efficency (unweighted): ", end = "")
     print(baseTimeTotalTotal / newTimeTotalTotal)
     print()
         
